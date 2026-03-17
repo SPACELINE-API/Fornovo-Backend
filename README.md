@@ -152,9 +152,3 @@ core/settings.py
 
 Caso contrário, o Django ignorará os modelos daquela pasta.
 
-```
-
----
-
-Se quiser, também posso te mostrar **3 melhorias simples de README usadas em projetos profissionais no GitHub** (índice clicável, árvore de pastas e badges) que deixam a documentação **bem mais profissional para portfólio ou TCC**.
-```
