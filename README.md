@@ -1,85 +1,160 @@
-## Fornovo Backend - Documentação Técnica
+# Fornovo Backend - Documentação Técnica
 
-Estrutura de Pastas:
-🔹 core/
+---
+
+## Estrutura de Pastas
+
+### 🔹 core/
 Contém as configurações globais do Django.
 
-settings.py: Configurações de banco de dados, middlewares e registro de apps.
-urls.py: O "porteiro" principal que delega as rotas para as aplicações específicas.
+- **settings.py**  
+  Configurações de banco de dados, middlewares e registro de apps.
 
-🔹 apps/
-Diretório onde reside toda a lógica de negócio do sistema:
+- **urls.py**  
+  O "porteiro" principal que delega as rotas para as aplicações específicas.
 
-projetos/: Gestão do ciclo de vida das obras (Cadastro, listagem e status).
+---
 
-usuarios/: Autenticação e níveis de acesso (Admin, Engenheiro, Projetista).
+### 🔹 apps/
+Diretório onde reside toda a lógica de negócio do sistema.
 
-calculos/: Motores de cálculo para memoriais técnicos e levantamento de campo.
+- **projetos/**  
+  Gestão do ciclo de vida das obras (Cadastro, listagem e status).
 
-🔹 utils/
+- **usuarios/**  
+  Autenticação e níveis de acesso (Admin, Engenheiro, Projetista).
+
+- **calculos/**  
+  Motores de cálculo para memoriais técnicos e levantamento de campo.
+
+---
+
+### 🔹 utils/
 Scripts auxiliares, validadores e funções matemáticas globais.
 
-Como criar novas Apps
-Para manter a organização e evitar erros, pfv siga este padrão ao criar novas funcionalidades:
+---
 
-1. Comando de Criação
-Execute a partir da pasta raiz (ForBack/):
+# Como criar novas Apps
 
+Para manter a organização e evitar erros, siga este padrão ao criar novas funcionalidades.
+
+---
+
+## 1. Comando de Criação
+
+Execute a partir da pasta raiz **(ForBack/)**:
+
+```bash
 python manage.py startapp nome_da_app ./apps/nome_da_app
+````
 
-2. Ajuste Obrigatório no apps.py
-Vá até apps/nome_da_app/apps.py e configure o caminho:
+---
 
+## 2. Ajuste Obrigatório no apps.py
+
+Vá até:
+
+```
+apps/nome_da_app/apps.py
+```
+
+Configure o caminho:
+
+```python
 class NomeDaAppConfig(AppConfig):
-    name = 'apps.nome_da_app' 
+    name = 'apps.nome_da_app'
+```
 
-3. Registro no settings.py
-Adicione a nova aplicação na lista INSTALLED_APPS em core/settings.py:
+---
 
-Python
+## 3. Registro no settings.py
 
+Adicione a nova aplicação na lista **INSTALLED_APPS** em:
+
+```
+core/settings.py
+```
+
+```python
 INSTALLED_APPS = [
     ...
     'apps.nome_da_app',
 ]
+```
 
-4. Configuração de Rotas (URLs)
-Crie um arquivo urls.py dentro da pasta da sua nova app.
+---
 
-Registre esse arquivo no core/urls.py usando a função include().
+## 4. Configuração de Rotas (URLs)
 
-Como executar o projeto
-Certifique-se de que o ambiente virtual está ativo: .\.venv\Scripts\Activate.ps1
+1. Crie um arquivo `urls.py` dentro da pasta da nova app.
 
-Navegue até a pasta do projeto: cd ForBack
+2. Registre esse arquivo no `core/urls.py` usando a função `include()`.
 
-Inicie o servidor: python manage.py runserver
+---
 
---------------------------------------------------------------------------
+# Como executar o projeto
 
-## Guia de Banco de Dados (Migrations)
-Para quem for responsável pela modelagem do banco de dados, favor seguir este fluxo para garantir que as tabelas sejam criadas corretamente dentro da estrutura modular:
+### 1. Ativar o ambiente virtual
 
-1. Criando as Migrações
-Sempre que alterar um arquivo models.py, rode o comando na raiz (ForBack/):
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
 
+### 2. Navegar até a pasta do projeto
+
+```bash
+cd ForBack
+```
+
+### 3. Iniciar o servidor
+
+```bash
+python manage.py runserver
+```
+
+---
+
+# Guia de Banco de Dados (Migrations)
+
+Para quem for responsável pela modelagem do banco de dados, seguir este fluxo para garantir que as tabelas sejam criadas corretamente dentro da estrutura modular.
+
+---
+
+## 1. Criando as Migrações
+
+Sempre que alterar um arquivo `models.py`, execute na raiz **(ForBack/)**:
+
+```bash
 python manage.py makemigrations
+```
 
-O Django detectará automaticamente os modelos dentro de apps/ graças à configuração do apps.py e do settings.py.
+O Django detectará automaticamente os modelos dentro de `apps/` graças à configuração do `apps.py` e do `settings.py`.
 
-2. Aplicando as Mudanças
+---
+
+## 2. Aplicando as Mudanças
+
 Para refletir as alterações no banco de dados:
 
+```bash
 python manage.py migrate
+```
 
-3. Atenção com as Apps
-Certifique-se de que a App está registrada em INSTALLED_APPS no core/settings.py antes de rodar os comandos, caso contrário, o Django ignorará os modelos daquela pasta.
+---
 
-🚀 O que você pode fazer agora:
-Como a parte de pastas e documentação está pronta, você já pode seguir com o commit.
+## 3. Atenção com as Apps
 
-git add .
+Certifique-se de que a App está registrada em **INSTALLED_APPS** no arquivo:
 
-git commit -m "docs: adiciona instruções de migração ao README e finaliza estrutura"
+```
+core/settings.py
+```
 
-git push origin sua-branch
+Caso contrário, o Django ignorará os modelos daquela pasta.
+
+```
+
+---
+
+Se quiser, também posso te mostrar **3 melhorias simples de README usadas em projetos profissionais no GitHub** (índice clicável, árvore de pastas e badges) que deixam a documentação **bem mais profissional para portfólio ou TCC**.
+```
