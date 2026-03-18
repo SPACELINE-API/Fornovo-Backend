@@ -74,12 +74,3 @@ python manage.py migrate
 
 3. Atenção com as Apps
 Certifique-se de que a App está registrada em INSTALLED_APPS no core/settings.py antes de rodar os comandos, caso contrário, o Django ignorará os modelos daquela pasta.
-
-🚀 O que você pode fazer agora:
-Como a parte de pastas e documentação está pronta, você já pode seguir com o commit.
-
-git add .
-
-git commit -m "docs: adiciona instruções de migração ao README e finaliza estrutura"
-
-git push origin sua-branch
