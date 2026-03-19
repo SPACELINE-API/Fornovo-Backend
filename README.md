@@ -151,4 +151,3 @@ core/settings.py
 ```
 
 Caso contrário, o Django ignorará os modelos daquela pasta.
-
