@@ -14,7 +14,7 @@ class criarUsuario(APIView):
                 email_usuario = request.data.get('email_usuario'),
                 senha_usuario = request.data.get('senha_usuario'),
                 nivel_usuario = request.data.get('nivel_usuario'),
-                status = request.data.get('status')
+                status = request.data.get('status','Ativo')
             )
 
             return Response({
