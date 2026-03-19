@@ -14,7 +14,7 @@ class Projeto(models.Model):
 
     cliente = models.CharField(max_length=100)
     localizacao = models.CharField(max_length=200, null=True, blank=True)
-    status = models.CharField(max_length=50)
+    status = models.CharField(max_length=50, default = 'Pendente')
 
     criado_em = models.DateTimeField(auto_now_add=True)
 
