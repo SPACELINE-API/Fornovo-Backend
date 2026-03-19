@@ -1,9 +1,13 @@
 from django.db import models
 from apps.usuarios.models import Usuario
-
+import uuid
 
 class Projeto(models.Model):
-    id_projeto = models.AutoField(primary_key=True)
+    id_projeto = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
     nome_projeto = models.CharField(max_length=200)
 
     engenheiro = models.ForeignKey(
@@ -14,7 +18,7 @@ class Projeto(models.Model):
 
     cliente = models.CharField(max_length=100)
     localizacao = models.CharField(max_length=200, null=True, blank=True)
-    status = models.CharField(max_length=50)
+    status = models.CharField(max_length=50, default='Pendente')
 
     criado_em = models.DateTimeField(auto_now_add=True)
 
