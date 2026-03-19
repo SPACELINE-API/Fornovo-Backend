@@ -12,13 +12,14 @@ class cadastrarProjeto(APIView):
         try:
             engenheiro_id = request.data.get("engenheiro")
 
-            engenheiro = Usuario.objects.get(id=engenheiro_id)
+            engenheiro = Usuario.objects.get(id_usuario=engenheiro_id)
 
             projeto = Projeto.objects.create(
                 nome_projeto=request.data.get("nome_projeto"),
                 engenheiro=engenheiro,
                 cliente=request.data.get("cliente"),
-                localizacao=request.data.get("localizacao")
+                localizacao=request.data.get("localizacao"),
+                status = request.data.get('status', 'Pendente')
             )
 
             return Response({
