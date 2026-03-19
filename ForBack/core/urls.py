@@ -21,6 +21,7 @@ urlpatterns = [
     path('admin', admin.site.urls),
     # Rota para a aplicação de cálculos:
     path('calculos', include('apps.calculos.urls')),
+    path('projetos', include('apps.projetos.urls')),
     
     # Repita para as outras apps quando for adicionar aqui:
     # path('usuarios/', include('apps.usuarios.urls')),
