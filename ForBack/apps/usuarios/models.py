@@ -6,7 +6,7 @@ class Usuario(models.Model):
     email_usuario = models.EmailField(max_length=150, unique=True)
     senha_usuario = models.CharField(max_length=255)
     nivel_usuario = models.CharField(max_length=50)
-    status = models.CharField(max_length=20)
+    status = models.CharField(max_length=20, default = 'Ativo')
 
     class Meta:
         db_table = "usuarios"
