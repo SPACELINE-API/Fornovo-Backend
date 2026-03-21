@@ -21,8 +21,7 @@ urlpatterns = [
     path('admin', admin.site.urls),
     path('calculos/', include('apps.calculos.urls')),
     path('projetos/', include('apps.projetos.urls')),
-    path('usuarios/',include('apps.usuarios.urls'))
-    
-    # Repita para as outras apps quando for adicionar aqui:
-    # path('usuarios/', include('apps.usuarios.urls')),
+    path('usuarios/', include('apps.usuarios.urls')),
+    path('dados-ia/', include('apps.dados_ia.urls')),
 ]
+

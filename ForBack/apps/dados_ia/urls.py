@@ -1,10 +1,10 @@
 from django.urls import path
-from . import views
+from .views import CadastrarDadosExtraidos, CadastrarLogValidacao, CadastrarDadosManuais
+
 app_name = 'dados_ia'
 
 urlpatterns = [
-    path('', views.index, name='index'), 
-    
-    # Exemplo: dominio.com/dados_ia/estruturas/
-    # path('estruturas/', views.estruturas, name='estruturas'),
-]
+    path('dados-extraidos/', CadastrarDadosExtraidos.as_view(), name='cadastrar_dados_extraidos'),
+    path('log-validacao/', CadastrarLogValidacao.as_view(), name='cadastrar_log_validacao'),
+    path('dados-manuais/', CadastrarDadosManuais.as_view(), name='cadastrar_dados_manuais'),
+]

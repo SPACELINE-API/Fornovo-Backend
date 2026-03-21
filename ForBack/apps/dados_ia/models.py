@@ -1,7 +1,7 @@
 import zlib
 import json
 from django.db import models
-from apps.projetos.models import Projeto, Norma
+from apps.projetos.models import Projeto, Norma, Arquivo
 
 # Create your models here.
 
@@ -15,25 +15,7 @@ O que deve ser feito:
 - Adicionar índices nos campos de id do projeto para acelerar a recuperação dos dados durante a geração do memorial.
 '''
 
-class ArquivoDXF(models.Model):
-    """
-    Objetivo: Armazenar a referência aos arquivos originais (DXF/CAD) submetidos.
-    Recebe: O ID do projeto vinculado, o nome do arquivo, seu caminho no servidor e o status de processamento.
-    Uso: Serve como uma base de dados para a IA realizar a analise desses dados e gerar o memorial de calculo.
-    """
-    id_arquivo = models.AutoField(primary_key=True)
-    projeto = models.ForeignKey(
-        Projeto,
-        on_delete=models.CASCADE,
-        db_column="projeto_id"
-    )
-    nome_arquivo = models.CharField(max_length=255)
-    caminho_arquivo = models.CharField(max_length=500)
-    data_upload = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=20, default="pendente")
 
-    class Meta:
-        db_table = "arquivos_dxf"
 
 class DadosExtraidos(models.Model):
     """
@@ -43,7 +25,7 @@ class DadosExtraidos(models.Model):
     """
     id_dados = models.AutoField(primary_key=True)
     arquivo = models.ForeignKey(
-        ArquivoDXF,
+        Arquivo,
         on_delete=models.CASCADE,
         db_column="arquivo_id"
     )
