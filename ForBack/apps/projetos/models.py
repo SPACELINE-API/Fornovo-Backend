@@ -40,7 +40,7 @@ class Arquivo(models.Model):
 
     nome_arquivo = models.CharField(max_length=255)
     hash_arquivo = models.CharField(max_length=255, unique=True)
-    caminho_arquivo = models.TextField()
+    caminho_arquivo = models.FileField(upload_to="cad_arquivos/") #Todos os arquivos vão para /media/cad_arquivos
     tipo_arquivo = models.CharField(max_length=50)
 
     class Meta:
