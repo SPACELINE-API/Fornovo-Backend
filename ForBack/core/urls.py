@@ -8,8 +8,10 @@ urlpatterns = [
     # Rota para a aplicação de cálculos, projetos e usuarios:
     path('calculos/', include('apps.calculos.urls')),
     path('projetos/', include('apps.projetos.urls')),
-    path('usuarios/',include('apps.usuarios.urls')),
+    path('usuarios/', include('apps.usuarios.urls')),
+    path('dados-ia/', include('apps.dados_ia.urls')),
 ]
+
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) # Configura pasta pra testar os arquivos de media em desenvolvimento
