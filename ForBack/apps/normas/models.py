@@ -13,6 +13,8 @@ class Norma(models.Model):
     nome = models.CharField(max_length=200)
     descricao = models.TextField(null=True, blank=True)
 
+    hash_arquivo = models.CharField(max_length=64, unique=True, null=True, blank=True)
+
     ano = models.IntegerField()
     serie = models.CharField(max_length=50, null=True, blank=True)
     status = models.CharField(max_length=20, choices=statusNorma, default="ativo")
