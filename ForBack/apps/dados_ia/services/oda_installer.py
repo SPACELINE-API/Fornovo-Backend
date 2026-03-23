@@ -11,10 +11,19 @@ ODA_URL = f"https://www.opendesign.com/guestfiles/get?filename=ODAFileConverter_
 ODA_INSTALL_PATH = Path("C:/Program Files/ODA/ODAFileConverter")
 INSTALLER_PATH = Path("C:/Temp/ODAFileConverter_installer.msi")
 LOG_PATH = Path("C:/Temp/oda_install.log")
+FLAG_FILE = Path("C:/Temp/oda_installed.flag")
 
 
 def ensure_oda_ready():
     try:
+        oda_exe = ODA_INSTALL_PATH / "ODAFileConverter.exe"
+
+        if oda_exe.exists() and FLAG_FILE.exists():
+            return {
+                "ok": True,
+                "oda_path": str(oda_exe)
+            }
+
         if not ctypes.windll.shell32.IsUserAnAdmin():
             script = Path(__file__).resolve()
             ret = ctypes.windll.shell32.ShellExecuteW(
@@ -24,15 +33,7 @@ def ensure_oda_ready():
                 return {"ok": False, "error": "Falha ao obter privilégios de admin"}
             sys.exit(0)
 
-        installed = False
-        try:
-            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\ODA\ODAFileConverter')
-            winreg.CloseKey(key)
-            installed = True
-        except FileNotFoundError:
-            installed = False
-
-        if not installed:
+        if not oda_exe.exists():
             INSTALLER_PATH.parent.mkdir(parents=True, exist_ok=True)
 
             def is_valid_msi(path: Path):
@@ -122,10 +123,11 @@ def ensure_oda_ready():
             0xFFFF, 0x001A, 0, "Environment", 0x0002, 5000, ctypes.byref(result)
         )
 
-        oda_exe = ODA_INSTALL_PATH / "ODAFileConverter.exe"
-
         if not oda_exe.exists():
             return {"ok": False, "error": "Executável não encontrado após instalação"}
+
+        FLAG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        FLAG_FILE.touch()
 
         return {
             "ok": True,
