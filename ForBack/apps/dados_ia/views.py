@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from .models import DadosExtraidos, LogValidacao, DadosInseridosManualmente
 from apps.projetos.models import Projeto, Norma, Arquivo
+from .services import oda_installer as oda
+from django.http import JsonResponse
 
 class CadastrarDadosExtraidos(APIView):
     permission_classes = [AllowAny]
@@ -90,4 +92,23 @@ class CadastrarDadosManuais(APIView):
         except Projeto.DoesNotExist:
             return Response({"erro": "Projeto não encontrado"}, status=404)
         except Exception as e:
-            return Response({"erro": str(e)}, status=400)
+            return Response({"erro": str(e)}, status=400)
+
+class ConverterArquivo(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        result = oda.ensure_oda_ready()
+
+        if not result['ok']:
+            return JsonResponse(result, status = 500)
+        
+        oda_exe = result['oda_path']
+
+        
+
+
+            
+
+
+    
