@@ -1,6 +1,13 @@
 from django.db import models
 from apps.usuarios.models import Usuario
+from django.core.exceptions import ValidationError
 import uuid
+
+padraoStatus = [
+    ('Pendente', 'Pendente'),
+    ('Em andamento', 'Em andamento'),
+    ('Concluído', 'Concluído'),
+]
 
 class Projeto(models.Model):
     id_projeto = models.UUIDField(
@@ -18,8 +25,14 @@ class Projeto(models.Model):
 
     cliente = models.CharField(max_length=100)
     localizacao = models.CharField(max_length=200, null=True, blank=True)
-    status = models.CharField(max_length=50, default='Pendente')
 
+
+    status = models.CharField(max_length=50, choices=padraoStatus, default='Pendente')
+
+    descricao = models.TextField(null=True, blank=True)
+    data_inicio = models.DateField(null=True, blank=True)
+    data_fim = models.DateField(null=True, blank=True)
+    
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -28,6 +41,16 @@ class Projeto(models.Model):
     def __str__(self):
         return self.nome_projeto
 
+    # Essa função serve para verificar se a data de inicio é menor que a data do fim
+    def clean(self):
+        if self.data_inicio and self.data_fim:
+            if self.data_fim < self.data_inicio:
+                raise ValidationError("A data de fim não pode ser menor que a data de início.")
+    
+    # Essa função serve para valdiar a função clean
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs) 
 
 class Arquivo(models.Model):
     id_arquivo = models.AutoField(primary_key=True)
