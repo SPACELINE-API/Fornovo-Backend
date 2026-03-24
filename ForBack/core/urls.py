@@ -10,6 +10,7 @@ urlpatterns = [
     path('api/projetos/', include('apps.projetos.urls')),
     path('api/usuarios/', include('apps.usuarios.urls')),
     path('api/dados-ia/', include('apps.dados_ia.urls')),
+    path('api/normas/', include('apps.normas.urls')),
 ]
 
 

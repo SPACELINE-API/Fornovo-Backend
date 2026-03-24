@@ -1,5 +1,6 @@
 from django.db import models
 from apps.usuarios.models import Usuario
+from apps.normas.models import Norma
 from django.core.exceptions import ValidationError
 import uuid
 
@@ -35,6 +36,12 @@ class Projeto(models.Model):
     
     criado_em = models.DateTimeField(auto_now_add=True)
 
+    normas = models.ManyToManyField(
+    Norma,
+    through='ProjetoNorma',
+    related_name='projetos'
+)
+
     class Meta:
         db_table = "projetos"
 
@@ -50,7 +57,7 @@ class Projeto(models.Model):
     # Essa função serve para valdiar a função clean
     def save(self, *args, **kwargs):
         self.full_clean()
-        super().save(*args, **kwargs) 
+        super().save(*args, **kwargs)
 
 class Arquivo(models.Model):
     id_arquivo = models.AutoField(primary_key=True)
@@ -68,25 +75,6 @@ class Arquivo(models.Model):
 
     class Meta:
         db_table = "arquivos"
-
-
-class Norma(models.Model):
-    id_norma = models.AutoField(primary_key=True)
-
-    codigo = models.CharField(max_length=50)
-    nome = models.CharField(max_length=200)
-    descricao = models.TextField(null=True, blank=True)
-
-    ano = models.IntegerField()
-    serie = models.CharField(max_length=50, null=True, blank=True)
-
-    status = models.CharField(max_length=20, default="ativo")
-    criado_em = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "normas"
-        unique_together = ("codigo", "ano", "serie")
-
 
 class ProjetoNorma(models.Model):
     id = models.AutoField(primary_key=True)

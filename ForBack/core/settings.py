@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'apps.projetos',
     'apps.calculos',
     'apps.dados_ia',
+    'apps.normas'
 ]
 
 MIDDLEWARE = [
