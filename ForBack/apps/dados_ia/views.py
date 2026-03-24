@@ -12,7 +12,7 @@ from django.http import FileResponse
 
 from .models import DadosExtraidos, LogValidacao, DadosInseridosManualmente
 from apps.projetos.models import Projeto, Norma, Arquivo
-from .services import oda_installer as oda
+from .services import oda_installer as oda, extractorDXF as extractor
 
 
 class CadastrarDadosExtraidos(APIView):
@@ -129,13 +129,17 @@ class ConverterArquivo(APIView):
                     "stderr": result.stderr,
                 }, status=500)
 
-            dxf_content = dxf_files[0].read_bytes()
-            dxf_name = dxf_files[0].name
+            dxf_path = dxf_files[0]
 
-            from django.http import HttpResponse
-            response = HttpResponse(dxf_content, content_type="application/octet-stream")
-            response["Content-Disposition"] = f'attachment; filename="{dxf_name}"'
-            return response
+            try:
+                dados_extraidos = extractor.processar_dxf_para_json(str(dxf_path), gerar_chunks=True)
+            except Exception as e:
+                return Response({
+                    "erro": "Conversão concluída, mas falha na extração do DXF.",
+                    "detalhe": str(e)
+                }, status=500)
+
+            return Response(dados_extraidos, status=200)
 
         finally:
             for f in input_dir.iterdir():
