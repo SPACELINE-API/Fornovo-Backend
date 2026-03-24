@@ -12,7 +12,7 @@ from django.http import FileResponse
 
 from .models import DadosExtraidos, LogValidacao, DadosInseridosManualmente
 from apps.projetos.models import Projeto, Norma, Arquivo
-from .services import oda_installer as oda
+from .services import oda_installer as oda, extractorDXF as extractor
 
 
 class CadastrarDadosExtraidos(APIView):
