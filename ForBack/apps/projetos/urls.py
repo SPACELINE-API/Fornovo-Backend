@@ -1,12 +1,10 @@
 from django.urls import path
 from . import views
-from .views import cadastrarProjeto
-from .views import uploadArquivo
+from .views import cadastrarProjeto, uploadArquivo, listarProjetos
 app_name = 'projetos'
 
 urlpatterns = [
     path('cadastrarProjeto', cadastrarProjeto.as_view(), name='cadastrarProjeto'),
-    path('upload-arquivo', uploadArquivo.as_view(), name='upload-arquivo') # URL do Upload de Arquivo   
-    # Exemplo: dominio.com/projetos/cadastrar/
-    # path('cadastrar/', views.cadastrar_projeto, name='cadastrar'),
+    path('upload-arquivo', uploadArquivo.as_view(), name='upload-arquivo'), # URL do Upload de Arquivo
+    path('listarProjetos', listarProjetos.as_view(), name='ListarProjetos')
 ]
