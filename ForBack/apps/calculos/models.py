@@ -5,6 +5,13 @@ from apps.projetos.models import Projeto
 # AMBIENTES
 class Ambiente(models.Model):
     id = models.AutoField(primary_key=True)  # ID único
+
+    projeto = models.ForeignKey(
+            Projeto,
+            on_delete=models.CASCADE,
+            related_name="ambientes"
+        ) # Chave estrangeira com projeto
+
     nome = models.CharField(max_length=255)  # Nome do ambiente
     comprimento = models.DecimalField(max_digits=10, decimal_places=2)  # Comprimento
     largura = models.DecimalField(max_digits=10, decimal_places=2)  # Largura
