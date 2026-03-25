@@ -18,7 +18,7 @@ class CriarNormaCompleta(APIView):
 
             # Verifica se os campos obrigatórios foram preenchidos
             if not arquivo or not codigo or not ano:
-                return Response({"erro": "Arquivo, código e ano são obrigatórios"}, status=400)
+                return Response({"erro": "Arquivo, nome, código e ano são obrigatórios"}, status=400)
 
             # Bloqueia o cadastro se já existir uma norma com o mesmo código, ano e série
             if Norma.objects.filter(codigo=codigo, ano=ano, serie=serie).exists():
@@ -68,3 +68,34 @@ class CriarNormaCompleta(APIView):
         except Exception as e:
             # Caso ocorra qualquer erro inesperado, retorna o erro
             return Response({"erro": str(e)}, status=400)
+
+class AlterarStatusNorma(APIView):
+    def patch(self, request, id_norma):
+        try:
+            novo_status = request.data.get("status")  # Puxa o status enviado
+
+            if novo_status not in ["ativa", "inativa"]: # Validação
+                return Response(
+                    {"erro": "Status inválido, apenas 'ativa' ou 'inativa'."},
+                    status=400
+                )
+
+            norma = Norma.objects.get(id_norma=id_norma) # Busca norma
+
+            if norma.status == novo_status: # Verifica se o status já está no estado solicitado
+                return Response(
+                    {"mensagem": f"A norma já está {norma.status}."},
+                    status=400
+                )
+                
+            norma.status = novo_status # Atualiza o status porque é diferente
+            norma.save()
+
+            return Response({
+                "mensagem": "Status atualizado com sucesso!",
+                "id_norma": norma.id_norma,
+                "status_atual": norma.status
+            }, status=200)
+
+        except Norma.DoesNotExist:
+            return Response({"erro": "Norma não encontrada."}, status=404)
