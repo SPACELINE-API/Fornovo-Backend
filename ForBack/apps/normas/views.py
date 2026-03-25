@@ -2,6 +2,7 @@ import hashlib
 import os
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.http import FileResponse
 from rest_framework import status
 from .models import Norma
 
@@ -60,7 +61,7 @@ class CriarNormaCompleta(APIView):
             # Retorna mensagem de sucesso e os dados da norma criada
             return Response({
                 "mensagem": "Norma e arquivo cadastrados com sucesso!",
-                "id_norma": nova_norma.id_norma,
+                "id_norma": nova_norma.id,
                 "nome_final": arquivo.name,
                 "url_arquivo": nova_norma.arquivo_pdf.url
             }, status=201)
@@ -99,3 +100,35 @@ class AlterarStatusNorma(APIView):
 
         except Norma.DoesNotExist:
             return Response({"erro": "Norma não encontrada."}, status=404)
+
+class VisualizarOuBaixarNorma(APIView):
+    def get(self, request, id_norma):
+        try:
+            norma = Norma.objects.get(id_norma=id_norma) # Puxa norma
+
+            if norma.status != "ativo": # Se estiver inativo, bloqueia
+                return Response(
+                    {"erro": "Esta norma está inativa e não pode ser acessada."},
+                    status=403
+                )
+
+            if not norma.arquivo_pdf: # Erro se não encontrar
+                return Response({"erro": "Arquivo não encontrado"}, status=404)
+
+            baixar = request.GET.get("download") == "1" # Se foi solicitado download, baixa
+
+            filename = (
+                f"{norma.codigo}:{norma.ano}:{norma.serie}.pdf"
+                if norma.serie
+                else f"{norma.codigo}:{norma.ano}.pdf"
+            )
+
+            return FileResponse(
+                norma.arquivo_pdf.open("rb"),
+                as_attachment=baixar,
+                filename=filename,
+                content_type="application/pdf"
+            )
+
+        except Norma.DoesNotExist:
+            return Response({"erro": "Norma não encontrada"}, status=404)
