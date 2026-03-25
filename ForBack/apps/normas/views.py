@@ -75,9 +75,9 @@ class AlterarStatusNorma(APIView):
         try:
             novo_status = request.data.get("status")  # Puxa o status enviado
 
-            if novo_status not in ["ativa", "inativa"]: # Validação
+            if novo_status not in ["ativo", "inativo"]: # Validação
                 return Response(
-                    {"erro": "Status inválido, apenas 'ativa' ou 'inativa'."},
+                    {"erro": "Status inválido, apenas 'ativo' ou 'inativo'."},
                     status=400
                 )
 
@@ -108,7 +108,7 @@ class VisualizarOuBaixarNorma(APIView):
 
             if norma.status != "ativo": # Se estiver inativo, bloqueia
                 return Response(
-                    {"erro": "Esta norma está inativa e não pode ser acessada."},
+                    {"erro": "Esta norma está inativo e não pode ser acessado."},
                     status=403
                 )
 
