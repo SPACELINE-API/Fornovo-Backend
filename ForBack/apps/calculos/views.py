@@ -211,8 +211,6 @@ class levantamentoCampo(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=400)
 
-class levantamentoCampo(APIView):
-    permission_classes = [AllowAny]
     def get(self, request, id=None):
         try:
             if id:
