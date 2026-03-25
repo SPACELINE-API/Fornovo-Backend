@@ -1,4 +1,5 @@
 from django.db import models
+from apps.projetos.models import Projeto
 
 
 # AMBIENTES

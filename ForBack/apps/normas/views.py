@@ -61,7 +61,7 @@ class CriarNormaCompleta(APIView):
             # Retorna mensagem de sucesso e os dados da norma criada
             return Response({
                 "mensagem": "Norma e arquivo cadastrados com sucesso!",
-                "id_norma": nova_norma.id,
+                "id_norma": nova_norma.id_norma,
                 "nome_final": arquivo.name,
                 "url_arquivo": nova_norma.arquivo_pdf.url
             }, status=201)
