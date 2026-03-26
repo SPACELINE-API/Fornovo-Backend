@@ -9,7 +9,6 @@ class Ambiente(models.Model):
     projeto = models.ForeignKey(
             Projeto,
             on_delete=models.CASCADE,
-            null=True,
             related_name="ambientes"
         ) # Chave estrangeira com projeto
 
