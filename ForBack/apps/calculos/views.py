@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from .models import Ambiente, PontoEletrico, Cabo, Disjuntor, TipoEletrico, Ramal, Hidraulica, Reservatorio, SPDA, Telecom,Cabeamento, Extintor, Hidrante, Duto, Cobertura, Peca, Canteiro, Residuo, Escavacao, Volume, Fundacao, SuperEstrutura, EstruturaMetalica, EstruturaMadeira
+from .models import Projeto, Ambiente, PontoEletrico, Cabo, Disjuntor, TipoEletrico, Ramal, Hidraulica, Reservatorio, SPDA, Telecom,Cabeamento, Extintor, Hidrante, Duto, Cobertura, Peca, Canteiro, Residuo, Escavacao, Volume, Fundacao, SuperEstrutura, EstruturaMetalica, EstruturaMadeira
 from django.db import transaction
 
 def to_int(value):
@@ -17,12 +17,20 @@ class levantamentoCampo(APIView):
         data = request.data
         try:
            with transaction.atomic():
+            projeto_id = data.get("projeto_id")
+            if not projeto_id:
+                return Response({"error": "projeto_id é obrigatório"}, status=400)
+            try:
+                projeto = Projeto.objects.get(id_projeto=projeto_id)
+            except Projeto.DoesNotExist:
+                return Response({"error": "Projeto não encontrado"}, status=404)
             ambiente = Ambiente.objects.create(
                 nome=data.get("nome"),
                 comprimento=to_float(data.get("comprimento")),
                 largura=to_float(data.get("largura")),
                 altura=to_float(data.get("altura")),
-                area=to_float(data.get("comprimento")) * to_float(data.get("largura"))
+                area=to_float(data.get("comprimento")) * to_float(data.get("largura")),
+                projeto=projeto
             )
 
             PontoEletrico.objects.create(
@@ -234,6 +242,7 @@ class levantamentoCampo(APIView):
                 volume = a.volume_set.first()
                 results.append({
                     "id": a.id,
+                    "projeto_id": a.projeto.id_projeto,
                     "nome": a.nome,
                     "comprimento": a.comprimento,
                     "largura": a.largura,
