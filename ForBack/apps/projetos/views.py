@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from .models import Projeto, Arquivo
 from apps.usuarios.models import Usuario
 from .serializers import ProjetoSerializer
+from django.http import FileResponse
 import hashlib
 
 
@@ -33,8 +34,17 @@ class cadastrarProjeto(APIView):
 
         return Response(serializer.errors, status=400)
 
+class listarProjetos(APIView):
+    permission_classes = [AllowAny]
 
-class uploadArquivo(APIView):
+    def get(self, request):
+        projetos = Projeto.objects.all()
+        serializer = ProjetoSerializer(projetos, many=True)
+
+        return Response(serializer.data)    
+
+
+class uploadArquivo(APIView): # POST Arquivo
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -74,13 +84,43 @@ class uploadArquivo(APIView):
             return Response({"erro": "Projeto não encontrado"}, status=404)
 
         except Exception as e:
-            return Response({"erro": str(e)}, status=400)
-        
-class listarProjetos(APIView):
-    permission_classes = [AllowAny]
+            return Response({"erro": str(e)}, status=400)        
 
-    def get(self, request):
-        projetos = Projeto.objects.all()
-        serializer = ProjetoSerializer(projetos, many=True)
+class buscarArquivo(APIView): # GET Arquivo
+    def get(self, request, id_arquivo):
+        try:
+            arquivo = Arquivo.objects.get(id_arquivo=id_arquivo)
 
-        return Response(serializer.data)    
+            if not arquivo.caminho_arquivo:
+                return Response(
+                    {"erro": "Arquivo não encontrado"},
+                    status=404
+                )
+
+            baixar = request.GET.get("download") == "1"
+
+            # pega extensão do arquivo
+            extensao = arquivo.nome_arquivo.split(".")[-1].lower()
+
+            # arquivos CAD sempre baixam, pra evitar bugs
+            if extensao in ["dwg", "dxf"]:
+                baixar = True
+
+            # define o tipo
+            if extensao == "pdf":
+                content_type = "application/pdf"
+            else:
+                content_type = "application/octet-stream"
+
+            return FileResponse(
+                arquivo.caminho_arquivo.open("rb"),
+                as_attachment=baixar,
+                filename=arquivo.nome_arquivo,
+                content_type=content_type
+            )
+
+        except Arquivo.DoesNotExist:
+            return Response(
+                {"erro": "Arquivo não encontrado"},
+                status=404
+            )
