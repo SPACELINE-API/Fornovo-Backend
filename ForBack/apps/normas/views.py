@@ -2,6 +2,7 @@ import hashlib
 import os
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.http import FileResponse
 from rest_framework import status
 from .models import Norma
 
@@ -18,7 +19,7 @@ class CriarNormaCompleta(APIView):
 
             # Verifica se os campos obrigatórios foram preenchidos
             if not arquivo or not codigo or not ano:
-                return Response({"erro": "Arquivo, código e ano são obrigatórios"}, status=400)
+                return Response({"erro": "Arquivo, nome, código e ano são obrigatórios"}, status=400)
 
             # Bloqueia o cadastro se já existir uma norma com o mesmo código, ano e série
             if Norma.objects.filter(codigo=codigo, ano=ano, serie=serie).exists():
@@ -68,3 +69,66 @@ class CriarNormaCompleta(APIView):
         except Exception as e:
             # Caso ocorra qualquer erro inesperado, retorna o erro
             return Response({"erro": str(e)}, status=400)
+
+class AlterarStatusNorma(APIView):
+    def patch(self, request, id_norma):
+        try:
+            novo_status = request.data.get("status")  # Puxa o status enviado
+
+            if novo_status not in ["ativo", "inativo"]: # Validação
+                return Response(
+                    {"erro": "Status inválido, apenas 'ativo' ou 'inativo'."},
+                    status=400
+                )
+
+            norma = Norma.objects.get(id_norma=id_norma) # Busca norma
+
+            if norma.status == novo_status: # Verifica se o status já está no estado solicitado
+                return Response(
+                    {"mensagem": f"A norma já está {norma.status}."},
+                    status=400
+                )
+                
+            norma.status = novo_status # Atualiza o status porque é diferente
+            norma.save()
+
+            return Response({
+                "mensagem": "Status atualizado com sucesso!",
+                "id_norma": norma.id_norma,
+                "status_atual": norma.status
+            }, status=200)
+
+        except Norma.DoesNotExist:
+            return Response({"erro": "Norma não encontrada."}, status=404)
+
+class VisualizarOuBaixarNorma(APIView):
+    def get(self, request, id_norma):
+        try:
+            norma = Norma.objects.get(id_norma=id_norma) # Puxa norma
+
+            if norma.status != "ativo": # Se estiver inativo, bloqueia
+                return Response(
+                    {"erro": "Esta norma está inativo e não pode ser acessado."},
+                    status=403
+                )
+
+            if not norma.arquivo_pdf: # Erro se não encontrar
+                return Response({"erro": "Arquivo não encontrado"}, status=404)
+
+            baixar = request.GET.get("download") == "1" # Se foi solicitado download, baixa
+
+            filename = (
+                f"{norma.codigo}:{norma.ano}:{norma.serie}.pdf"
+                if norma.serie
+                else f"{norma.codigo}:{norma.ano}.pdf"
+            )
+
+            return FileResponse(
+                norma.arquivo_pdf.open("rb"),
+                as_attachment=baixar,
+                filename=filename,
+                content_type="application/pdf"
+            )
+
+        except Norma.DoesNotExist:
+            return Response({"erro": "Norma não encontrada"}, status=404)
