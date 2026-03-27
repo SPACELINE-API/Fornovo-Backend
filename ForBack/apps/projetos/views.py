@@ -41,7 +41,16 @@ class listarProjetos(APIView):
         projetos = Projeto.objects.all()
         serializer = ProjetoSerializer(projetos, many=True)
 
-        return Response(serializer.data)    
+        return Response(serializer.data)   
+
+class buscarProjeto(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, id_projeto):
+        projeto = Projeto.objects.get(id_projeto = id_projeto)
+        serializer = ProjetoSerializer(projeto)
+
+        return Response(serializer.data) 
 
 
 class uploadArquivo(APIView): # POST Arquivo
