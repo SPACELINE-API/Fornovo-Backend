@@ -219,10 +219,11 @@ class levantamentoCampo(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=400)
 
-    def get(self, request, id=None):
+    def get(self, request, projeto_id=None):
         try:
-            if id:
-                ambientes = Ambiente.objects.filter(id=id)
+            export_excel = request.query_params.get('export') == 'true'
+            if projeto_id:
+                ambientes = Ambiente.objects.filter(projeto__id_projeto=projeto_id)
                 if not ambientes.exists():
                     return Response({"error": "Ambiente não encontrado"}, status=404)
             else:
@@ -241,7 +242,6 @@ class levantamentoCampo(APIView):
                 escavacao = a.escavacao_set.first()
                 volume = a.volume_set.first()
                 results.append({
-                    "id": a.id,
                     "projeto_id": a.projeto.id_projeto,
                     "nome": a.nome,
                     "comprimento": a.comprimento,
@@ -309,6 +309,6 @@ class levantamentoCampo(APIView):
                         for md in a.estruturamadeira_set.all()
                     ],
                 })
-            return Response(results[0] if id else results)
+            return Response(results[0] if projeto_id else results)
         except Exception as e:
             return Response({"error": str(e)}, status=500)

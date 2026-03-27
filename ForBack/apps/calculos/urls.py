@@ -5,5 +5,5 @@ from .views import levantamentoCampo
 
 urlpatterns = [
     path('form-levantamento', levantamentoCampo.as_view()),
-    path('form-levantamento/<int:id>', levantamentoCampo.as_view()),
+    path('form-levantamento/<uuid:projeto_id>', levantamentoCampo.as_view())
 ]
