@@ -1,7 +1,6 @@
-import zlib
-import json
 from django.db import models
 from apps.projetos.models import Projeto, Norma, Arquivo
+from .services.json_zip_service import JsonZipService
 
 # Create your models here.
 
@@ -38,16 +37,16 @@ class DadosExtraidos(models.Model):
 
     @property
     def dados(self):
-        """Propriedade para acessar os dados descomprimidos automaticamente."""
+        """Propriedade para acessar os dados descomprimidos automaticamente via JsonZipService."""
         if not self.dados_binarios:
             return None
-        return json.loads(zlib.decompress(self.dados_binarios).decode('utf-8'))
+        return JsonZipService.descompactar_zip_para_json(self.dados_binarios)
 
     @dados.setter
     def dados(self, value):
-        """Seta os dados comprimindo-os para zlib antes de salvar no banco."""
+        """Seta os dados compactando-os para .zip via JsonZipService antes de salvar no banco."""
         if value:
-            self.dados_binarios = zlib.compress(json.dumps(value).encode('utf-8'))
+            self.dados_binarios = JsonZipService.compactar_json_para_bytes(value)
         else:
             self.dados_binarios = None
 

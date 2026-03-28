@@ -2,7 +2,8 @@ from django.test import TestCase
 from apps.projetos.models import Projeto, Norma, Arquivo
 from apps.usuarios.models import Usuario
 from .models import DadosExtraidos, LogValidacao, DadosInseridosManualmente
-import zlib
+import zipfile
+import io
 import json
 
 # Lista global para armazenar os resultados dos testes
@@ -79,7 +80,18 @@ class Test01_ModelIntegrity(TestCase):
             self.assertIsInstance(conteudo_binario, bytes)
             print("✅ Sucesso: Dados armazenados em formato binário.")
             
-            registrar_resultado("Integridade e Compressão JSON", "PASSOU")
+            # Verifica se é um ZIP válido (assinatura PK)
+            self.assertTrue(conteudo_binario.startswith(b'PK'))
+            print("✅ Sucesso: Assinatura de arquivo ZIP detectada (PK).")
+            
+            # Tenta abrir como ZIP e ler o arquivo interno
+            with zipfile.ZipFile(io.BytesIO(conteudo_binario)) as zf:
+                self.assertIn("dados.json", zf.namelist())
+                json_lido = json.loads(zf.read("dados.json").decode('utf-8'))
+                self.assertEqual(json_lido, dados_complexos)
+            print("✅ Sucesso: Estrutura interna do ZIP validada com dados.json.")
+            
+            registrar_resultado("Integridade e Compressão JSON (ZIP)", "PASSOU")
         except Exception as e:
             registrar_resultado("Integridade e Compressão JSON", "FALHOU")
             raise e
