@@ -122,6 +122,12 @@ class levantamentoCampo(APIView):
                     diametro=h.get("diametro"),
                     conexoes=to_int(h.get("conexoes"))
                 )
+            for duto in data.get("dutos", []):
+                Duto.objects.create(
+                    ambiente=ambiente,
+                    diametro=duto.get("diametro"),
+                    comprimento_m=to_float(duto.get("comprimento"))
+                )
 
             Cobertura.objects.create(
                 ambiente=ambiente,
@@ -264,6 +270,7 @@ class levantamentoCampo(APIView):
                     "reservatorio": {"tipo": reserva.tipo, "capacidade": reserva.capacidade_l} if reserva else None,
                     "hidrantes": [{"localizacao": h.localizacao, "diametro": h.diametro, "conexoes": h.conexoes} for h in a.hidrante_set.all()],
                     "extintores": [{"tipo": e.tipo, "peso": e.peso_kg, "capacidade": e.capacidade_l} for e in a.extintor_set.all()],
+                    "dutos":[{"diamento": d.diametro, "comprimento":d.comprimento_m}for d in a.duto_set.all()],
                     "hastesAterramento": spda.hastes if spda else 0,
                     "caixasInspecao": spda.caixas_inspecao if spda else 0,
                     "terminaisAereos": spda.terminais_aereos if spda else 0,
@@ -301,7 +308,7 @@ class levantamentoCampo(APIView):
                         for s in a.superestrutura_set.all()
                     ],
                     "metalicas": [
-                        {"tipo": m.tipo, "tipoPerfil": m.perfil, "secao": m.secao, "peso": m.peso_kgf} 
+                        {"tipo": m.tipo, "tipoPerfil": m.perfil, "secao": m.secao, "peso": m.peso_kgf, "elastomero":m.elastomero} 
                         for m in a.estruturametalica_set.all()
                     ],
                     "madeira": [
