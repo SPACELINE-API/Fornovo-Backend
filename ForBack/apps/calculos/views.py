@@ -299,12 +299,12 @@ class levantamentoCampo(APIView):
                     } if volume else {},
                     "fundacoes": [
                         {"tipo": f.tipo, "profundidade": f.profundidade_m, "volumeLastro": f.volume_lastro_m3, 
-                         "volumeConcreto": f.volume_concreto_m3, "pesoFerragem": f.ferragem_kgf} 
+                         "volumeConcreto": f.volume_concreto_m3, "pesoFerragem": f.ferragem_kgf, "pesoEstribo":f.estribo_kgf, "areaForma":f.forma_m2} 
                         for f in a.fundacao_set.all()
                     ],
                     "superestrutura": [
                         {"tipo": s.tipo, "largura": s.largura_m, "altura": s.altura_m, 
-                         "volumeConcreto": s.volume_concreto_m3, "pesoFerragem": s.ferragem_kgf} 
+                         "volumeConcreto": s.volume_concreto_m3, "pesoFerragem": s.ferragem_kgf, "pesoEstribo":s.estribo_kgf, "areaForma":s.forma_m2} 
                         for s in a.superestrutura_set.all()
                     ],
                     "metalicas": [
