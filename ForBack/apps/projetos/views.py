@@ -52,6 +52,49 @@ class buscarProjeto(APIView):
 
         return Response(serializer.data) 
 
+class ProjetoDelete(APIView):
+    permission_classes = [AllowAny]
+
+    def delete(self, request, id_projeto):
+        try:
+            projeto = Projeto.objects.get(id_projeto=id_projeto)
+            projeto.delete()
+            return Response(status=204)
+
+        except Projeto.DoesNotExist:
+            return Response(
+                {"erro": "Projeto não encontrado"},
+                status=404
+            )
+        
+class ProjetoUpdate(APIView):
+    permission_classes = [AllowAny]
+
+    def patch(self, request, id_projeto):
+        try:
+            projeto = Projeto.objects.get(id_projeto=id_projeto)
+
+            serializer = ProjetoSerializer(
+                projeto,
+                data=request.data,
+                partial=True
+            )
+
+            if serializer.is_valid():
+                serializer.save()
+
+                return Response({
+                    "mensagem": "Projeto atualizado com sucesso",
+                    "dados": serializer.data
+                })
+
+            return Response(serializer.errors, status=400)
+
+        except Projeto.DoesNotExist:
+            return Response(
+                {"erro": "Projeto não encontrado"},
+                status=404
+            )
 
 class uploadArquivo(APIView): # POST Arquivo
     permission_classes = [AllowAny]
