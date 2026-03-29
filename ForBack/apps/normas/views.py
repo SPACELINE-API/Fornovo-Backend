@@ -132,3 +132,109 @@ class VisualizarOuBaixarNorma(APIView):
 
         except Norma.DoesNotExist:
             return Response({"erro": "Norma não encontrada"}, status=404)
+
+class ListarNormas(APIView):
+    def get(self, request):
+        normas = Norma.objects.all()
+        lista_normas = [
+            {
+                "id_norma": norma.id_norma,
+                "codigo": norma.codigo,
+                "nome": norma.nome,
+                "ano": norma.ano,
+                "serie": norma.serie,
+                "descricao": norma.descricao,
+                "status": norma.status,
+                "url_arquivo": norma.arquivo_pdf.url if norma.arquivo_pdf else None
+            }
+            for norma in normas
+        ]
+        return Response(lista_normas, status=200)
+    
+class EditarDetsNorma(APIView):
+    def patch(self, request, id_norma):
+        try:
+            norma = Norma.objects.get(id_norma=id_norma)
+            codigo = request.data.get("codigo")
+            nome = request.data.get("nome")
+            ano = request.data.get("ano")
+            serie = request.data.get("serie")
+            descricao = request.data.get("descricao")
+            arquivo_novo = request.FILES.get("arquivo_pdf")
+            remover_arquivo = request.data.get("remover_arquivo")
+
+            if codigo:
+                norma.codigo = codigo
+
+            if nome:
+                norma.nome = nome
+
+            if ano:
+                norma.ano = ano
+
+            if serie is not None:
+                norma.serie = serie
+
+            if descricao is not None:
+                norma.descricao = descricao
+
+            if remover_arquivo == "true":
+                if norma.arquivo_pdf:
+                    norma.arquivo_pdf.delete(save=False)
+                    norma.arquivo_pdf = None
+
+            if arquivo_novo:
+
+                ext = arquivo_novo.name.split(".")[-1].lower()
+
+                if ext != "pdf" or arquivo_novo.content_type != "application/pdf":
+                    return Response(
+                        {"erro": "Apenas arquivos PDF válidos são permitidos"},
+                        status=400
+                    )
+                hash_arquivo = hashlib.sha256(
+                    arquivo_novo.read()
+                ).hexdigest()
+
+                arquivo_novo.seek(0)
+                if Norma.objects.filter(hash_arquivo=hash_arquivo)\
+                        .exclude(id_norma=id_norma)\
+                        .exists():
+
+                    return Response(
+                        {"erro": "Este arquivo PDF já foi enviado em outra norma."},
+                        status=400
+                    )
+                if norma.arquivo_pdf:
+                    norma.arquivo_pdf.delete(save=False)
+                nome_limpo = f"{norma.codigo}_{norma.ano}"
+
+                if norma.serie:
+                    nome_limpo += f"_{norma.serie}"
+
+                arquivo_novo.name = (
+                    f"{nome_limpo.replace(' ', '_')}.pdf"
+                )
+
+                norma.arquivo_pdf = arquivo_novo
+                norma.hash_arquivo = hash_arquivo
+
+            norma.save()
+
+            return Response({
+                "mensagem": "Detalhes da norma atualizados com sucesso!",
+                "id_norma": norma.id_norma,
+                "codigo": norma.codigo,
+                "nome": norma.nome,
+                "ano": norma.ano,
+                "serie": norma.serie,
+                "descricao": norma.descricao,
+                "status": norma.status,
+                "url_arquivo": norma.arquivo_pdf.url if norma.arquivo_pdf else None
+            }, status=200)
+
+        except Norma.DoesNotExist:
+            return Response(
+                {"erro": "Norma não encontrada."},
+                status=404
+            )
