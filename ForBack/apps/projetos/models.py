@@ -7,6 +7,7 @@ import uuid
 padraoStatus = [
     ('Pendente', 'Pendente'),
     ('Em andamento', 'Em andamento'),
+    ('Em Revisão', 'Em Revisão'),
     ('Concluído', 'Concluído'),
 ]
 
