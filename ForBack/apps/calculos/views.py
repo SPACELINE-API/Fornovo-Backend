@@ -270,7 +270,7 @@ class levantamentoCampo(APIView):
                     "reservatorio": {"tipo": reserva.tipo, "capacidade": reserva.capacidade_l} if reserva else None,
                     "hidrantes": [{"localizacao": h.localizacao, "diametro": h.diametro, "conexoes": h.conexoes} for h in a.hidrante_set.all()],
                     "extintores": [{"tipo": e.tipo, "peso": e.peso_kg, "capacidade": e.capacidade_l} for e in a.extintor_set.all()],
-                    "dutos":[{"diamento": d.diametro, "comprimento":d.comprimento_m}for d in a.duto_set.all()],
+                    "dutos":[{"diametro": d.diametro, "comprimento":d.comprimento_m}for d in a.duto_set.all()],
                     "hastesAterramento": spda.hastes if spda else 0,
                     "caixasInspecao": spda.caixas_inspecao if spda else 0,
                     "terminaisAereos": spda.terminais_aereos if spda else 0,
