@@ -8,7 +8,6 @@ from .serializers import ProjetoSerializer
 from django.http import FileResponse
 import hashlib
 
-
 class cadastrarProjeto(APIView):
     permission_classes = [AllowAny]
 
