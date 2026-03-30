@@ -41,7 +41,16 @@ class listarProjetos(APIView):
         projetos = Projeto.objects.all()
         serializer = ProjetoSerializer(projetos, many=True)
 
-        return Response(serializer.data)    
+        return Response(serializer.data)   
+
+class buscarProjeto(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, id_projeto):
+        projeto = Projeto.objects.get(id_projeto = id_projeto)
+        serializer = ProjetoSerializer(projeto)
+
+        return Response(serializer.data) 
 
 class ProjetoDelete(APIView):
     permission_classes = [AllowAny]
@@ -93,6 +102,7 @@ class uploadArquivo(APIView): # POST Arquivo
     def post(self, request):
         try:
             arquivo = request.FILES.get("arquivo")
+
             if not arquivo:
                 return Response({"erro": "Nenhum arquivo enviado"}, status=400)
 
@@ -130,9 +140,12 @@ class uploadArquivo(APIView): # POST Arquivo
             return Response({"erro": str(e)}, status=400)        
 
 class buscarArquivo(APIView): # GET Arquivo
-    def get(self, request, id_arquivo):
+    def get(self, request, projeto_id):
         try:
-            arquivo = Arquivo.objects.get(id_arquivo=id_arquivo)
+            arquivo = Arquivo.objects.filter(projeto_id=projeto_id).first()
+
+            if not arquivo:
+                return Response({"error": "Nenhum arquivo vinculado ao projeto"}, status=404)
 
             if not arquivo.caminho_arquivo:
                 return Response(
