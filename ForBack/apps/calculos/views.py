@@ -122,6 +122,12 @@ class levantamentoCampo(APIView):
                     diametro=h.get("diametro"),
                     conexoes=to_int(h.get("conexoes"))
                 )
+            for duto in data.get("dutos", []):
+                Duto.objects.create(
+                    ambiente=ambiente,
+                    diametro=duto.get("diametro"),
+                    comprimento_m=to_float(duto.get("comprimento"))
+                )
 
             Cobertura.objects.create(
                 ambiente=ambiente,
@@ -219,10 +225,11 @@ class levantamentoCampo(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=400)
 
-    def get(self, request, id=None):
+    def get(self, request, projeto_id=None):
         try:
-            if id:
-                ambientes = Ambiente.objects.filter(id=id)
+            export_excel = request.query_params.get('export') == 'true'
+            if projeto_id:
+                ambientes = Ambiente.objects.filter(projeto__id_projeto=projeto_id)
                 if not ambientes.exists():
                     return Response({"error": "Ambiente não encontrado"}, status=404)
             else:
@@ -241,7 +248,6 @@ class levantamentoCampo(APIView):
                 escavacao = a.escavacao_set.first()
                 volume = a.volume_set.first()
                 results.append({
-                    "id": a.id,
                     "projeto_id": a.projeto.id_projeto,
                     "nome": a.nome,
                     "comprimento": a.comprimento,
@@ -264,6 +270,7 @@ class levantamentoCampo(APIView):
                     "reservatorio": {"tipo": reserva.tipo, "capacidade": reserva.capacidade_l} if reserva else None,
                     "hidrantes": [{"localizacao": h.localizacao, "diametro": h.diametro, "conexoes": h.conexoes} for h in a.hidrante_set.all()],
                     "extintores": [{"tipo": e.tipo, "peso": e.peso_kg, "capacidade": e.capacidade_l} for e in a.extintor_set.all()],
+                    "dutos":[{"diametro": d.diametro, "comprimento":d.comprimento_m}for d in a.duto_set.all()],
                     "hastesAterramento": spda.hastes if spda else 0,
                     "caixasInspecao": spda.caixas_inspecao if spda else 0,
                     "terminaisAereos": spda.terminais_aereos if spda else 0,
@@ -292,16 +299,16 @@ class levantamentoCampo(APIView):
                     } if volume else {},
                     "fundacoes": [
                         {"tipo": f.tipo, "profundidade": f.profundidade_m, "volumeLastro": f.volume_lastro_m3, 
-                         "volumeConcreto": f.volume_concreto_m3, "pesoFerragem": f.ferragem_kgf} 
+                         "volumeConcreto": f.volume_concreto_m3, "pesoFerragem": f.ferragem_kgf, "pesoEstribo":f.estribo_kgf, "areaForma":f.forma_m2} 
                         for f in a.fundacao_set.all()
                     ],
                     "superestrutura": [
                         {"tipo": s.tipo, "largura": s.largura_m, "altura": s.altura_m, 
-                         "volumeConcreto": s.volume_concreto_m3, "pesoFerragem": s.ferragem_kgf} 
+                         "volumeConcreto": s.volume_concreto_m3, "pesoFerragem": s.ferragem_kgf, "pesoEstribo":s.estribo_kgf, "areaForma":s.forma_m2} 
                         for s in a.superestrutura_set.all()
                     ],
                     "metalicas": [
-                        {"tipo": m.tipo, "tipoPerfil": m.perfil, "secao": m.secao, "peso": m.peso_kgf} 
+                        {"tipo": m.tipo, "tipoPerfil": m.perfil, "secao": m.secao, "peso": m.peso_kgf, "elastomero":m.elastomero} 
                         for m in a.estruturametalica_set.all()
                     ],
                     "madeira": [
@@ -309,6 +316,6 @@ class levantamentoCampo(APIView):
                         for md in a.estruturamadeira_set.all()
                     ],
                 })
-            return Response(results[0] if id else results)
+            return Response(results[0] if projeto_id else results)
         except Exception as e:
             return Response({"error": str(e)}, status=500)
