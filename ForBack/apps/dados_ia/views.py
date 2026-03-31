@@ -539,50 +539,6 @@ class ExtrairDadosDXFAPIView(APIView):
             return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class DebugEstruturalView(APIView):
-    parser_classes = [MultiPartParser]
-
-    def post(self, request, *args, **kwargs):
-        try:
-            dxf_file = request.FILES.get("dxf")
-            if not dxf_file:
-                return Response({"erro": "Envie o JSON do DXF no campo 'dxf'."}, status=400)
-            dados = json.loads(dxf_file.read().decode("utf-8"))
-
-            from .services.memorial.levantamento_campo import _extrair_dxf_por_ambiente, _extrair_ambientes_super
-
-            entidades = dados.get("entidades", [])
-            textos = dados.get("textos", []) or [e for e in entidades if e.get("tipo") in ("MTEXT", "TEXT")]
-            blocos = dados.get("blocos", [])
-            ambientes = _extrair_ambientes_super(textos)
-            ambientes = [a for a in ambientes if a.get("area", 0) > 0]
-
-            dxf_por_amb = _extrair_dxf_por_ambiente(entidades, textos, blocos, ambientes)
-
-            saida = []
-            for amb in ambientes:
-                nome = amb.get("nome", "")
-                dxf = dxf_por_amb.get(nome, {})
-                est = dxf.get("estrutura", {})
-                saida.append({
-                    "ambiente": nome,
-                    "area_m2": amb.get("area"),
-                    "pilares_m": est.get("pilares"),
-                    "vigas_m": est.get("vigas"),
-                    "lajes_m": est.get("lajes"),
-                })
-
-            for s in saida:
-                print(f"AMBIENTE: {s['ambiente']} | area={s['area_m2']}m² | pilares={s['pilares_m']}m | vigas={s['vigas_m']}m | lajes={s['lajes_m']}m")
-
-            return Response({"ambientes": saida, "total": len(saida)})
-
-        except Exception as e:
-            import traceback
-            print(traceback.format_exc())
-            return Response({"erro": str(e)}, status=500)
-
-
 class DebugEletricaView(APIView):
     parser_classes = [MultiPartParser]
 

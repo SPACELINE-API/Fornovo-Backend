@@ -11,7 +11,6 @@ from .views import (
     ProcessarProjetoIA,
     GerarPlanilhaServicosPreliminaresAPIView,
     ExtrairDadosDXFAPIView,
-    DebugEstruturalView,
     DebugEletricaView,
     MemorialCalculo
 )
@@ -30,7 +29,6 @@ urlpatterns = [
     path('gerar-levantamento', GerarPlanilhaLevantamentoAPIView.as_view(), name='memorial-calculo'),
     path('gerar-servicos_preliminares', GerarPlanilhaServicosPreliminaresAPIView.as_view(), name='servicos_preliminares'),
     path('extrair-dados-dxf', ExtrairDadosDXFAPIView.as_view(), name='extrair_dados_dxf'),
-    path('debug-estrutural', DebugEstruturalView.as_view(), name='debug_estrutural'),
     path('debug-eletrica', DebugEletricaView.as_view(), name='debug_eletrica'),
     path('memorial-calculo', MemorialCalculo.as_view(), name='memorial-calculo')
 ]
