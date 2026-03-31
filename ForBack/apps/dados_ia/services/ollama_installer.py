@@ -18,7 +18,7 @@ INSTALLER_PATH = Path("C:/Temp/OllamaSetup.exe")
 FLAG_FILE = Path("C:/Temp/ollama_installed.flag")
 
 MODELOS = [
-    "llama3.1:8b",
+    "llama2:7b",
     "nomic-embed-text",
 ]
 

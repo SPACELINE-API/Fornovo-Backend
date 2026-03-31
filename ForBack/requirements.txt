@@ -14,7 +14,7 @@ chromadb==1.5.5
 click==8.3.1
 colorama==0.4.6
 dataclasses-json==0.6.7
-Django==5.2.12
+Django==6.0.3
 django-cors-headers==4.9.0
 django_db==0.0.7
 djangorestframework==3.17.0
