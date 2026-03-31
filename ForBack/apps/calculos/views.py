@@ -340,22 +340,3 @@ class levantamentoCampo(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=500)
 
-class GerenciarLayersView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        layers_recebidas = request.data.get("layers", [])
-        if not layers_recebidas:
-            return Response({"erro": "Envie {'layers': [...]} no body"}, status=400)
-
-        dicionario = _ler_dicionario()
-        novas = [l for l in layers_recebidas if l not in dicionario]
-
-        if novas:
-            dicionario.update(novas)
-            _salvar_dicionario(dicionario)
-
-        return Response({"layers": sorted(dicionario)})
-
-    def get(self, request):
-        return Response({"layers": sorted(_ler_dicionario())})
