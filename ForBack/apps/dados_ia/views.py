@@ -17,7 +17,6 @@ from .models import DadosExtraidos, LogValidacao, DadosInseridosManualmente
 from apps.projetos.models import Projeto, Norma, Arquivo
 from .services import (chroma_normas as agente, oda_installer as oda, extractorDXF as extractor, 
                        ollama_installer)
-from .services.memorial import planilhas as p
 from .services.chroma_normas import inserir_norma
 from .services.ollama_execute import executar_agente
 import json
