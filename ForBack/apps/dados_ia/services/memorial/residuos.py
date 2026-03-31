@@ -1,9 +1,10 @@
 import json
 import re
+import math
 
-def auditar_limpeza_interdicoes(caminho_json: str):
+def auditar_estruturas_ambientes(caminho_json: str):
     print(f"A ler o ficheiro: {caminho_json}...")
-    print("A analisar dados sobre Limpeza e Interdições. Aguarde...\n")
+    print("A analisar ambientes, pilares, vigas e lajes. Aguarde...\n")
     
     try:
         with open(caminho_json, 'r', encoding='utf-8') as f:
@@ -12,7 +13,6 @@ def auditar_limpeza_interdicoes(caminho_json: str):
         print(f"❌ Erro: Ficheiro '{caminho_json}' não encontrado.")
         return
 
-    # Desempacota o JSON caso esteja encapsulado
     if 'entidades' not in dados:
         for val in dados.values():
             if isinstance(val, dict) and 'entidades' in val:
@@ -24,113 +24,114 @@ def auditar_limpeza_interdicoes(caminho_json: str):
                 except: pass
 
     textos = dados.get('textos', []) or [e for e in dados.get('entidades', []) if e.get('tipo') in ('MTEXT', 'TEXT')]
-    blocos = dados.get('blocos', []) + [e for e in dados.get('entidades', []) if e.get('tipo') in ('INSERT', 'BLOCK')]
-    layers_projeto = dados.get('layers', [])
+    entidades = dados.get('entidades', [])
     
-    # Palavras-chave abrangentes (sem acentos para facilitar a busca)
-    kw_limpeza = ['LIMPEZ', 'LIMPAR', 'ROCAD', 'ROÇAD', 'CAPIN']
-    kw_interdicao = ['INTERDIC', 'INTERDIÇ', 'ISOLAMENT', 'TAPUME', 'BLOQUEI', 'ADJACENCI', 'ADJACÊNCI']
-    
-    print("=" * 80)
-    print(" 🧹 RELATÓRIO: LIMPEZA E INTERDIÇÕES DE OBRA 🚧 ")
-    print("=" * 80)
-    
-    # ---------------------------------------------------------
-    # 1. Busca em Layers
-    # ---------------------------------------------------------
-    layers_encontradas = []
-    for l in layers_projeto:
-        l_upper = l.upper()
-        if any(k in l_upper for k in kw_limpeza + kw_interdicao):
-            layers_encontradas.append(l)
-    
-    print("\n--- 1. LAYERS ENCONTRADAS ---")
-    if layers_encontradas:
-        for l in layers_encontradas:
-            print(f"  • {l}")
-    else:
-        print("  ❌ Nenhuma layer nomeada com termos de limpeza ou interdição.")
-
-    # ---------------------------------------------------------
-    # 2. Busca em Textos e Anotações
-    # ---------------------------------------------------------
-    print("\n--- 2. TEXTOS ENCONTRADOS ---")
-    textos_encontrados = False
+    ambientes = []
+    kw_ambientes = ['SALA', 'CIRCULAÇ', 'CIRCULAC', 'CENTRO', 'BANHEIRO', 'QUARTO', 'COZINHA', 'DEPÓSITO', 'DEPOSITO', 'PÁTIO', 'PATIO', 'WC', 'COPA', 'AUDITÓRIO', 'BLOCO']
     
     for t in textos:
         c_raw = t.get('conteudo', '')
-        # Normaliza o texto para a busca
-        c_upper = c_raw.upper().replace('Ç', 'C').replace('Ã', 'A').replace('ÇÕES', 'COES')
+        c_limpo = re.sub(r'\{[^{}]*\}', '', c_raw)
+        c_limpo = re.sub(r'\\[a-zA-Z0-9]+\d*\.?.?x?;', ' ', c_limpo).strip()
+        c_upper = c_limpo.upper()
         
-        tem_limpeza = any(k in c_upper for k in kw_limpeza)
-        tem_interdicao = any(k in c_upper for k in kw_interdicao)
-        
-        if tem_limpeza or tem_interdicao:
-            textos_encontrados = True
-            
-            # Limpa as tags de formatação do AutoCAD
-            c_limpo = re.sub(r'\{[^{}]*\}', '', c_raw).strip()
-            c_limpo = re.sub(r'\\[a-zA-Z0-9]+\d*\.?.?x?;', ' ', c_limpo).strip()
-            c_limpo = re.sub(r'\s+', ' ', c_limpo).strip()
-            
-            categoria = "LIMPEZA" if tem_limpeza else "INTERDIÇÃO"
-            if tem_limpeza and tem_interdicao: 
-                categoria = "LIMPEZA E INTERDIÇÃO"
-            
-            print(f"🔹 [{categoria}] Texto: '{c_limpo}'")
-            print(f"   Layer: {t.get('layer', '')} | Posição: {t.get('posicao', [0,0])}")
-            print("-" * 50)
-            
-    if not textos_encontrados:
-        print("  ❌ Nenhum texto ou anotação relacionado encontrado na planta.")
+        if re.search(r'm[²2]', c_upper) or any(k in c_upper for k in kw_ambientes):
+            nome_formatado = c_limpo.replace('\\P', ' ').replace('\\p', ' ').replace('\n', ' ')
+            nome_final = re.sub(r'\s+', ' ', nome_formatado).strip()
+            if nome_final:
+                ambientes.append({
+                    'nome': nome_final,
+                    'posicao': t.get('posicao', [0, 0, 0])
+                })
 
-    # ---------------------------------------------------------
-    # 3. Busca em Blocos / Atributos Ocultos
-    # ---------------------------------------------------------
-    print("\n--- 3. BLOCOS E ATRIBUTOS (Metadados do CAD) ---")
-    blocos_encontrados = False
-    
-    for b in blocos:
-        nome_bloco = b.get('nome', '').upper()
-        atributos = b.get('atributos', {})
-        dados_b = b.get('dados', {})
+    estruturas = []
+    for e in entidades:
+        layer = e.get('layer', '').upper()
+        tipo_est = None
         
-        dic_para_busca = {**atributos, **dados_b}
-        
-        tem_alvo = False
-        categoria = ""
-        
-        # Verifica no nome do bloco
-        if any(k in nome_bloco for k in kw_limpeza): 
-            tem_alvo = True; categoria += "LIMPEZA "
-        if any(k in nome_bloco for k in kw_interdicao): 
-            tem_alvo = True; categoria += "INTERDIÇÃO "
+        if 'PILAR' in layer: tipo_est = 'PILAR'
+        elif 'VIGA' in layer: tipo_est = 'VIGA'
+        elif 'LAJE' in layer: tipo_est = 'LAJE'
             
-        # Verifica dentro dos atributos do bloco
-        for k, v in dic_para_busca.items():
-            v_str = str(v).upper().replace('Ç', 'C').replace('Ã', 'A')
-            if any(kw in v_str for kw in kw_limpeza):
-                tem_alvo = True; categoria += "LIMPEZA "
-            if any(kw in v_str for kw in kw_interdicao):
-                tem_alvo = True; categoria += "INTERDIÇÃO "
+        if tipo_est:
+            d = e.get('dados', {})
+            tipo = e.get('tipo', '')
+            pos = [0, 0, 0]
+            medida = 0.0
+            
+            if tipo == 'LINE':
+                medida = d.get('comprimento', 0.0)
+                pos = d.get('inicio', [0, 0, 0])
+            elif tipo in ('LWPOLYLINE', 'POLYLINE'):
+                pts = d.get('pontos', [])
+                if pts:
+                    pos = pts[0]
+                    total = 0.0
+                    for i in range(len(pts) - 1):
+                        total += math.sqrt((pts[i+1][0] - pts[i][0])**2 + (pts[i+1][1] - pts[i][1])**2)
+                    medida = total
+                    
+            if medida > 0:
+                estruturas.append({
+                    'tipo': tipo_est,
+                    'layer': e.get('layer', ''),
+                    'medida': round(medida, 2),
+                    'posicao': pos
+                })
+
+    resultado = {a['nome']: {'PILAR': [], 'VIGA': [], 'LAJE': []} for a in ambientes}
+    if not ambientes:
+        resultado['SEM AMBIENTE'] = {'PILAR': [], 'VIGA': [], 'LAJE': []}
+
+    for est in estruturas:
+        if not ambientes:
+            resultado['SEM AMBIENTE'][est['tipo']].append(est)
+            continue
+            
+        menor_distancia = float('inf')
+        amb_mais_proximo = None
+        
+        for amb in ambientes:
+            pos_amb = amb['posicao']
+            pos_est = est['posicao']
+            dist = math.sqrt((pos_est[0] - pos_amb[0])**2 + (pos_est[1] - pos_amb[1])**2)
+            
+            if dist < menor_distancia:
+                menor_distancia = dist
+                amb_mais_proximo = amb['nome']
                 
-        if tem_alvo:
-            blocos_encontrados = True
-            # Evita categorias duplicadas na string
-            cat_final = " E ".join(list(set(categoria.split()))) 
-            
-            print(f"🔸 [{cat_final}] Bloco: '{b.get('nome', '')}'")
-            print(f"   Posição: {b.get('posicao', b.get('insercao', 'N/A'))}")
-            print(f"   Atributos Ocultos: {dic_para_busca}")
-            print("-" * 50)
+        if amb_mais_proximo:
+            resultado[amb_mais_proximo][est['tipo']].append(est)
 
-    if not blocos_encontrados:
-        print("  ❌ Nenhum bloco com esses atributos encontrado.")
+    for amb_nome, dados_est in resultado.items():
+        total_p = len(dados_est['PILAR'])
+        total_v = len(dados_est['VIGA'])
+        total_l = len(dados_est['LAJE'])
+        
+        if total_p == 0 and total_v == 0 and total_l == 0:
+            continue
+            
+        print(f"\n🔹 Ambiente: '{amb_nome}'")
+        
+        if total_p > 0:
+            print("   🔸 Pilares:")
+            for p in dados_est['PILAR']:
+                print(f"      - Layer: {p['layer']} | Medida/Perímetro: {p['medida']} unidades")
+                
+        if total_v > 0:
+            print("   🔸 Vigas:")
+            for v in dados_est['VIGA']:
+                print(f"      - Layer: {v['layer']} | Comprimento: {v['medida']} unidades")
+                
+        if total_l > 0:
+            print("   🔸 Lajes:")
+            for l in dados_est['LAJE']:
+                print(f"      - Layer: {l['layer']} | Perímetro: {l['medida']} unidades")
+                
+        print("-" * 60)
 
     print("\n" + "=" * 80)
 
 if __name__ == "__main__":
-    # Caminho do seu JSON
     JSON_ENTRADA = r"C:\Users\vinic\Downloads\teste.JSON" 
-    
-    auditar_limpeza_interdicoes(JSON_ENTRADA)
+    auditar_estruturas_ambientes(JSON_ENTRADA)

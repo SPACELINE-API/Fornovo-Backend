@@ -32,6 +32,7 @@ from .services import ollama_installer
 from .services.ollama_execute import executar_agente
 from .services.chroma_normas import inserir_norma
 from .services.memorial.serviços_preliminares import extrair_servicos_preliminares_para_xlsx
+from .services.memorial.memorial_calculo import extrair_memorial_calculo
 
 _lock = threading.Lock()
 
@@ -645,7 +646,6 @@ class GerarPlanilhaServicosPreliminaresAPIView(APIView):
             if not dados:
                 return Response({"erro": "Nenhum dado ou arquivo JSON fornecido."}, status=status.HTTP_400_BAD_REQUEST)
             
-            # Chama a função específica de Serviços Preliminares
             arquivo_bytes = extrair_servicos_preliminares_para_xlsx(dados)
             
             if not arquivo_bytes:
@@ -655,12 +655,55 @@ class GerarPlanilhaServicosPreliminaresAPIView(APIView):
                 arquivo_bytes,
                 content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-            # Altera o nome do arquivo para refletir a nova planilha
-            response["Content-Disposition"] = 'attachment; filename="servicos_preliminares_preenchido.xlsx"'
+            response["Content-Disposition"] = 'attachment; filename="servicos_preliminares.xlsx"'
             
             return response
             
         except Exception as e:
             import traceback
+            print(traceback.format_exc())
+            return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class MemorialCalculo(APIView):
+    parser_classes = [MultiPartParser]
+
+    def _parse_json_field(self, request, key):
+        arquivo = request.FILES.get(key)
+        if arquivo:
+            return json.loads(arquivo.read().decode("utf-8"))
+        valor = request.data.get(key)
+        if valor:
+            if isinstance(valor, str):
+                return json.loads(valor)
+            return valor
+        return None
+
+    def post(self, request, *args, **kwargs):
+        try:
+            dados_arquivo = self._parse_json_field(request, "arquivo")
+            dados_dxf = self._parse_json_field(request, "dxf")
+
+            if not dados_arquivo:
+                return Response({"erro": "Envie o JSON manual no campo 'arquivo'."}, status=status.HTTP_400_BAD_REQUEST)
+            if not dados_dxf:
+                return Response({"erro": "Envie o JSON do DXF no campo 'dxf'."}, status=status.HTTP_400_BAD_REQUEST)
+
+            dados_mesclados = mesclar_form_com_dxf(dados_arquivo, dados_dxf)
+
+            arquivo_bytes = extrair_memorial_calculo(dados_mesclados)
+            if not arquivo_bytes:
+                return Response({"erro": "Falha na geração do arquivo Excel em memória."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            response = HttpResponse(
+                arquivo_bytes,
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            response["Content-Disposition"] = 'attachment; filename="memorial_calculo_completo.xlsx"'
+            return response
+
+        except json.JSONDecodeError as e:
+            return Response({"erro": "JSON inválido.", "detalhe": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
             print(traceback.format_exc())
             return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
