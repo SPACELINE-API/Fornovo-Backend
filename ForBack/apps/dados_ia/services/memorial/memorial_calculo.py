@@ -3,6 +3,7 @@ import math
 import io
 import json
 import logging
+from collections import Counter
 from pathlib import Path
 from datetime import datetime
 import openpyxl
@@ -39,8 +40,8 @@ COL_AMB_AREA  = 9
 COL_AMB_VAOS  = 10
 
 COL_EST_PILAR_C = 5
-COL_EST_VIGA_C  = 9
-COL_EST_LAJE_C  = 13
+COL_EST_PILAR_L = 6
+COL_EST_PILAR_H = 7
 
 COL_ELE_QUADROS  = 5
 COL_ELE_CONDULE  = 6
@@ -156,8 +157,6 @@ def get_coluna_demolicao(nome):
     if "ALVENARIA" in nome or "PLATIBANDA" in nome: return 10
     if "FUNDAÇÃO" in nome or "FUNDACAO" in nome: return 11
     if "PILAR" in nome or "POSTE" in nome or re.search(r'\bP\d+\b', nome): return 12
-    if "VIGA" in nome: return 13
-    if "LAJE" in nome: return 14
     return None
 
 def _extrair_servicos_agrupados(textos):
@@ -197,7 +196,7 @@ def _extrair_servicos_agrupados(textos):
                         idx = counter_dem[nome_padronizado]
                         nome_exibicao = nome_padronizado if idx == 1 else f"{nome_padronizado} ({idx})"
                         is_continuo = any(k in nome_padronizado for k in ['DUTO', 'FIAÇÃO', 'CABO', 'ALVENARIA', 'PLATIBANDA', 'PISO'])
-                        is_pilar_estrutural = any(k in nome_padronizado for k in ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'PILAR', 'POSTE', 'FUNDAÇÃO', 'VIGA', 'LAJE'])
+                        is_pilar_estrutural = any(k in nome_padronizado for k in ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'PILAR', 'POSTE', 'FUNDAÇÃO'])
                         if is_continuo:
                             valor = metragem_val if metragem_val is not None else ""
                         elif is_pilar_estrutural:
@@ -295,29 +294,53 @@ def _match_ambiente_fuzzy(descricao, nomes_amb):
 def _extrair_dxf_por_ambiente(entidades, textos, blocos, ambientes):
     if not ambientes:
         return {}
-    estrutura_por_amb = {}
-    for chave, palavra in [('pilares', 'PILAR'), ('vigas', 'VIGA'), ('lajes', 'LAJE')]:
-        por_chave = {}
-        for e in entidades:
-            layer = e.get('layer', '').upper()
-            p = palavra.upper()
-            if p in layer or p.replace('Ê', 'E').replace('Ç', 'C') in layer:
-                d = e.get('dados', {})
-                comp = _comp_entidade(e)
-                info = {'tipo': e.get('tipo'), 'layer': e.get('layer'), 'comprimento': round(comp, 2)}
-                if e.get('tipo') == 'LINE':
-                    info['inicio'] = d.get('inicio')
-                    info['fim'] = d.get('fim')
-                elif e.get('tipo') in ('LWPOLYLINE', 'POLYLINE'):
-                    pts = d.get('pontos', [])
-                    if pts:
-                        xs = [p[0] for p in pts]
-                        ys = [p[1] for p in pts]
-                        info['largura_bbox'] = round(max(xs) - min(xs), 2)
-                        info['altura_bbox'] = round(max(ys) - min(ys), 2)
-                por_chave.setdefault('elementos', []).append(info)
-                por_chave['total'] = por_chave.get('total', 0) + comp
-        estrutura_por_amb[chave] = por_chave
+
+    estruturas_mapeadas = {a['nome']: {'pilares': []} for a in ambientes if a.get('nome')}
+    
+    for e in entidades:
+        layer = e.get('layer', '').upper()
+        if 'PILAR' in layer:
+            d = e.get('dados', {})
+            tipo = e.get('tipo', '')
+            pos = None
+            comp = _comp_entidade(e)
+            is_poly = False
+            c_med = 0.0
+            l_med = 0.0
+            
+            if tipo == 'LINE':
+                pos = d.get('inicio', [0, 0])
+                c_med = comp
+            elif tipo in ('LWPOLYLINE', 'POLYLINE'):
+                pts = d.get('pontos', [])
+                if pts:
+                    pos = pts[0]
+                    xs = [p[0] for p in pts]
+                    ys = [p[1] for p in pts]
+                    c_med = max(xs) - min(xs)
+                    l_med = max(ys) - min(ys)
+                    is_poly = True
+            
+            if pos and comp > 0:
+                menor_dist = float('inf')
+                amb_alvo = None
+                for amb in ambientes:
+                    nome = amb.get('nome')
+                    if not nome or 'posicao' not in amb: continue
+                    pos_amb = amb['posicao']
+                    dist = math.sqrt((pos[0] - pos_amb[0])**2 + (pos[1] - pos_amb[1])**2)
+                    if dist < menor_dist:
+                        menor_dist = dist
+                        amb_alvo = nome
+                        
+                if amb_alvo:
+                    estruturas_mapeadas[amb_alvo]['pilares'].append({
+                        'comp': comp,
+                        'pos': pos,
+                        'is_poly': is_poly,
+                        'c': c_med,
+                        'l': l_med
+                    })
 
     padroes_ele = {
         'tomadas': r'\bTOM\.?\s*(?:AR|BAIXA|M[ÉE]DIA|ALTA)?\b|\bTOMADAS?\b|\bTUGS?\b|\bTUES?\b|\bTOMADA\s+DE\s+FOR[ÇC]A\b|\bTF\b',
@@ -379,11 +402,50 @@ def _extrair_dxf_por_ambiente(entidades, textos, blocos, ambientes):
             continue
         area = amb.get('area', 0)
         frac = area / total_area if total_area > 0 else 1.0 / len(ambientes)
+        h_amb = amb.get('h', PD_PADRAO)
 
-        estr = {}
-        for chave in ['pilares', 'vigas', 'lajes']:
-            info = estrutura_por_amb.get(chave, {})
-            estr[chave] = round(info.get('total', 0) * frac, 2)
+        est_amb = estruturas_mapeadas.get(nome, {'pilares': []})
+        
+        pilares_info = []
+        linhas_p = []
+        
+        for p in est_amb['pilares']:
+            if p['is_poly'] and p['c'] > 0 and p['l'] > 0:
+                pilares_info.append({'c': round(p['c'], 2), 'l': round(p['l'], 2), 'h': h_amb})
+            else:
+                linhas_p.append(p)
+                
+        visitados = set()
+        for i, l1 in enumerate(linhas_p):
+            if i in visitados: continue
+            grupo = [l1['comp']]
+            visitados.add(i)
+            for j, l2 in enumerate(linhas_p):
+                if j in visitados: continue
+                dist = math.sqrt((l1['pos'][0] - l2['pos'][0])**2 + (l1['pos'][1] - l2['pos'][1])**2)
+                if dist < 1.0:
+                    grupo.append(l2['comp'])
+                    visitados.add(j)
+            
+            c = round(max(grupo), 2)
+            l = round(min(grupo), 2) if len(grupo) >= 2 else c
+            pilares_info.append({'c': c, 'l': l, 'h': h_amb})
+
+        pilares_agrupados = Counter((p['c'], p['l'], p['h']) for p in pilares_info)
+        
+        c_pilar = l_pilar = h_pilar = None
+        
+        if pilares_agrupados:
+            (c, l, h), _ = pilares_agrupados.most_common(1)[0]
+            c_pilar = c
+            l_pilar = l
+            h_pilar = h
+
+        estr = {
+            'pilares_c': c_pilar,
+            'pilares_l': l_pilar,
+            'pilares_h': h_pilar
+        }
 
         ele = ele_por_amb.get(nome, {'tomadas': 0, 'interruptores': 0, 'luminarias': 0, 'quadros': 0, 'conduletes': 0})
         ele['dutos_m'] = round(duto_total * frac, 2)
@@ -436,7 +498,7 @@ def _extrair_ambientes_super(textos):
                 pos_v = v.get('posicao', [0, 0])
                 if math.sqrt((pos_amb[0] - pos_v[0])**2 + (pos_amb[1] - pos_v[1])**2) < RAIO_VAOS:
                     vaos_amb.append(v['conteudo'])
-            ambientes.append({'nome': nome_final, 'area': area_val, 'perimetro': v_perim, 'c': c_val, 'l': l_val, 'h': v_pd, 'e': ESPESSURA_PADRAO, 'vaos': ", ".join(vaos_amb)})
+            ambientes.append({'nome': nome_final, 'area': area_val, 'perimetro': v_perim, 'c': c_val, 'l': l_val, 'h': v_pd, 'posicao': pos_amb, 'e': ESPESSURA_PADRAO, 'vaos': ", ".join(vaos_amb)})
             seen.add(nome_final)
     return ambientes
 
@@ -487,17 +549,6 @@ def _preencher_rede_spda(ws, linha, amb: dict):
     escrever(ws, linha, COL_SPDA_CAPTACAO, amb.get('terminaisAereos'))
     escrever(ws, linha, COL_SPDA_CONDULE, amb.get('caixasInspecao'))
     escrever(ws, linha, COL_SPDA_ATERR, amb.get('hastesAterramento'))
-
-def _preencher_estruturas(ws, linha, amb: dict):
-    escrever(ws, linha, 2, amb.get('nome'))
-    sup = amb.get('superestrutura', [])
-    pilares = [s for s in sup if 'pilar' in (s.get('tipo') or '').lower()]
-    vigas = [s for s in sup if 'viga' in (s.get('tipo') or '').lower()]
-    lajes = [s for s in sup if 'laje' in (s.get('tipo') or '').lower()]
-    if pilares: escrever(ws, linha, COL_EST_PILAR_C, round(sum(float(p.get('largura') or 0) for p in pilares), 2))
-    if vigas: escrever(ws, linha, COL_EST_VIGA_C, round(sum(float(v.get('largura') or 0) for v in vigas), 2))
-    if lajes: escrever(ws, linha, COL_EST_LAJE_C, round(sum(float(l.get('largura') or 0) for l in lajes), 2))
-    if amb.get('fundacoes'): escrever(ws, linha, 14, round(sum(float(f.get('profundidade') or 0) for f in amb['fundacoes']), 2))
 
 def _preencher_incendio(ws, linha, amb: dict):
     escrever(ws, linha, 2, amb.get('nome'))
@@ -585,8 +636,6 @@ def extrair_memorial_calculo(dados_json: dict, ambiente_obj=None, template_path:
 
     dxf_por_amb = _extrair_dxf_por_ambiente(entidades, textos, blocos, ambientes) if entidades else {}
 
-    vigas     = _comp_fuzzy(entidades, 'VIGA')
-    lajes     = _comp_fuzzy(entidades, 'LAJE')
     pilares   = _comp_fuzzy(entidades, 'PILAR')
     fundacoes = _comp_fuzzy(entidades, 'FUNDAÇÃO') + _comp_fuzzy(entidades, 'BALDRAME') + _comp_fuzzy(entidades, 'SAPATA')
     eletrica  = _comp_fuzzy(entidades, 'FIAÇÃO') + _comp_fuzzy(entidades, 'ELETRODUTO') + _comp_fuzzy(entidades, 'ELETROCALHA') + _comp_fuzzy(entidades, 'CONDUITE')
@@ -638,17 +687,21 @@ def extrair_memorial_calculo(dados_json: dict, ambiente_obj=None, template_path:
             _preencher_rede_spda(ws_lev, r_red, amb)
             _preencher_incendio(ws_lev, r_inc, amb)
             _preencher_cobertura(ws_lev, r_cob, amb)
-            _preencher_estruturas(ws_lev, r_est, amb)
         else:
             escrever(ws_lev, r_ele, 2, amb.get('nome'))
             escrever(ws_lev, r_hid, 2, amb.get('nome'))
             escrever(ws_lev, r_red, 2, amb.get('nome'))
             escrever(ws_lev, r_inc, 2, amb.get('nome'))
 
-        escrever(ws_lev, r_est, 2, amb.get('nome'))
-        escrever(ws_lev, r_est, COL_EST_PILAR_C, dxf_est.get('pilares') or None)
-        escrever(ws_lev, r_est, COL_EST_VIGA_C, dxf_est.get('vigas') or None)
-        escrever(ws_lev, r_est, COL_EST_LAJE_C, dxf_est.get('lajes') or None)
+        tem_pilares = dxf_est.get('pilares_c') or dxf_est.get('pilares_l')
+
+        if tem_pilares:
+            escrever(ws_lev, r_est, 2, amb.get('nome'))
+            escrever(ws_lev, r_est, COL_EST_PILAR_C, dxf_est.get('pilares_c'))
+            escrever(ws_lev, r_est, COL_EST_PILAR_L, dxf_est.get('pilares_l'))
+            escrever(ws_lev, r_est, COL_EST_PILAR_H, dxf_est.get('pilares_h'))
+        else:
+            escrever(ws_lev, r_est, 2, "")
 
         if not amb.get('tomadas'):
             escrever(ws_lev, r_ele, COL_ELE_QUADROS, dxf_ele.get('quadros') or None)
@@ -663,7 +716,7 @@ def extrair_memorial_calculo(dados_json: dict, ambiente_obj=None, template_path:
     fonte = "FORM" if is_form else "CAD"
     log_line = (
         f"[AUTO] {ts} | {len(ambientes)} amb | Fonte: {fonte} | "
-        f"Vigas={vigas}m | Fiação={eletrica}m | "
+        f"Fiação={eletrica}m | "
         f"Incêndio={incendio}m | AF={hidro_af}m"
     )
     escrever(ws_lev, LINHA_LOG, 2, log_line)
