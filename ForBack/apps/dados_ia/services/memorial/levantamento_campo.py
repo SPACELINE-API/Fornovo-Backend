@@ -8,7 +8,6 @@ from pathlib import Path
 from datetime import datetime
 import openpyxl
 from openpyxl.cell.cell import MergedCell
-from ..movimento_solo import preencher_movimento_solo
 
 logging.basicConfig(
     level=logging.INFO,

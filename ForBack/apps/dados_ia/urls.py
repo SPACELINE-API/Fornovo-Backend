@@ -12,7 +12,8 @@ from .views import (
     GerarPlanilhaServicosPreliminaresAPIView,
     ExtrairDadosDXFAPIView,
     DebugEletricaView,
-    MemorialCalculo
+    MemorialCalculo,
+    GerarPlanilhaMovimentoSolo 
 )
 
 app_name = 'dados_ia'
@@ -30,5 +31,6 @@ urlpatterns = [
     path('gerar-servicos_preliminares', GerarPlanilhaServicosPreliminaresAPIView.as_view(), name='servicos_preliminares'),
     path('extrair-dados-dxf', ExtrairDadosDXFAPIView.as_view(), name='extrair_dados_dxf'),
     path('debug-eletrica', DebugEletricaView.as_view(), name='debug_eletrica'),
-    path('memorial-calculo', MemorialCalculo.as_view(), name='memorial-calculo')
+    path('memorial-calculo', MemorialCalculo.as_view(), name='memorial-calculo'),
+    path('movimento-solo', GerarPlanilhaMovimentoSolo.as_view(), name='movimento-solo')
 ]

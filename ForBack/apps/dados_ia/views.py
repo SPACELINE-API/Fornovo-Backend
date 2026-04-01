@@ -33,6 +33,7 @@ from .services.ollama_execute import executar_agente
 from .services.chroma_normas import inserir_norma
 from .services.memorial.serviços_preliminares import extrair_servicos_preliminares_para_xlsx
 from .services.memorial.memorial_calculo import extrair_memorial_calculo
+from .services.memorial.movimento_solo import extrair_movimento_solo
 
 _lock = threading.Lock()
 
@@ -660,6 +661,40 @@ class MemorialCalculo(APIView):
         except json.JSONDecodeError as e:
             return Response({"erro": "JSON inválido.", "detalhe": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+        except Exception as e:
+            print(traceback.format_exc())
+            return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class GerarPlanilhaMovimentoSolo(APIView):
+    parser_classes = [MultiPartParser] 
+
+    def post(self, request, *args, **kwargs):
+        try:
+            arquivo = request.FILES.get("arquivo")
+            
+            if arquivo:
+                dados = json.loads(arquivo.read().decode("utf-8"))
+            else:
+                dados = request.data
+                
+            if not dados:
+                return Response({"erro": "Nenhum dado ou arquivo JSON fornecido."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            arquivo_bytes = extrair_movimento_solo(dados)
+            
+            if not arquivo_bytes:
+                return Response({"erro": "Falha na geração do arquivo Excel em memória."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            response = HttpResponse(
+                arquivo_bytes,
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            
+            # Altera o nome do ficheiro de saída
+            response["Content-Disposition"] = 'attachment; filename="movimento_solo.xlsx"'
+            
+            return response
+            
         except Exception as e:
             print(traceback.format_exc())
             return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
