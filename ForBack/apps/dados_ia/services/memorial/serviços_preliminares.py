@@ -7,9 +7,6 @@ from datetime import datetime
 import openpyxl
 from openpyxl.cell.cell import MergedCell
 
-# =====================================================================
-# LOGGING
-# =====================================================================
 logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] %(levelname)s — %(message)s",
@@ -19,10 +16,6 @@ log = logging.getLogger("servicos_preliminares")
 
 MAX_ITENS = 80
 CAMINHO_TEMPLATE = Path(__file__).resolve().parent / "templates_excel" / "Memorial de Cálculo - Modelo.xlsx"
-
-# =====================================================================
-# HELPERS DE LIMPEZA E MAPEAMENTO
-# =====================================================================
 
 def _clean_text(raw):
     if not raw: return ""
@@ -71,13 +64,15 @@ def get_coluna_demolicao(nome):
     if "LAJE" in nome: return 14
     return None
 
-# =====================================================================
-# EXTRAÇÃO PROFUNDA (Qtd / Metragens / Numéricos)
-# =====================================================================
-
 def _extrair_servicos_agrupados(textos):
-    contagem_dem = {}
-    contagem_rem = {}
+    demolicoes_final = []
+    remocoes_final = []
+    
+    seen_dem = set()
+    seen_rem = set()
+    
+    counter_dem = {}
+    counter_rem = {}
     
     ruidos = ['PLANTA', 'APENAS', 'LEGENDA', 'ESCALA']
 
@@ -99,7 +94,6 @@ def _extrair_servicos_agrupados(textos):
         is_demolicao = any(k in c_upper for k in ['DEMOL', 'DEMOLIÇÃO', 'DEMOLIDA', 'DEMOLIDO'])
         is_remocao = any(k in c_upper for k in ['REMOV', 'REMOÇÃO', 'RETIRAR', 'REMOVIDO', 'REMOVIDA'])
 
-        # 1. PROCESSAR DEMOLIÇÕES
         if is_demolicao:
             if c_upper.strip() not in ['A DEMOLIR', 'DEMOLIÇÃO', 'DEMOLIR', 'A SER DEMOLIDA', 'A SER DEMOLIDO']:
                 sujeito = re.sub(r'\bA\s+(SER\s+)?DEMOL\w+\b(\s*/\s*REATERRAR)?', '', conteudo_limpo, flags=re.IGNORECASE)
@@ -108,16 +102,27 @@ def _extrair_servicos_agrupados(textos):
                 
                 if len(sujeito) > 1:
                     nome_padronizado = f"{sujeito.upper()} A DEMOLIR"
-                    if nome_padronizado not in contagem_dem:
-                        contagem_dem[nome_padronizado] = {'posicoes': set(), 'metragem_total': 0.0, 'tem_metragem': False}
+                    chave = (nome_padronizado, pos_xy)
                     
-                    if pos_xy not in contagem_dem[nome_padronizado]['posicoes']:
-                        contagem_dem[nome_padronizado]['posicoes'].add(pos_xy)
-                        if metragem_val is not None:
-                            contagem_dem[nome_padronizado]['metragem_total'] += metragem_val
-                            contagem_dem[nome_padronizado]['tem_metragem'] = True
+                    if chave not in seen_dem:
+                        seen_dem.add(chave)
+                        counter_dem[nome_padronizado] = counter_dem.get(nome_padronizado, 0) + 1
+                        idx = counter_dem[nome_padronizado]
+                        
+                        nome_exibicao = nome_padronizado if idx == 1 else f"{nome_padronizado} ({idx})"
+                        
+                        is_continuo = any(k in nome_padronizado for k in ['DUTO', 'FIAÇÃO', 'CABO', 'ALVENARIA', 'PLATIBANDA', 'PISO'])
+                        is_pilar_estrutural = any(k in nome_padronizado for k in ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'PILAR', 'POSTE', 'FUNDAÇÃO', 'VIGA', 'LAJE'])
+                        
+                        if is_continuo:
+                            valor = metragem_val if metragem_val is not None else ""
+                        elif is_pilar_estrutural:
+                            valor = ""
+                        else:
+                            valor = 1
+                            
+                        demolicoes_final.append((nome_exibicao, valor))
 
-        # 2. PROCESSAR REMOÇÕES
         if is_remocao and not is_demolicao:
             if c_upper.strip() not in ['A REMOVER', 'REMOÇÃO', 'REMOVER', 'A RETIRAR', 'RETIRAR']:
                 sujeito = re.sub(r'\b(A\s+(SER\s+)?(REMOV\w+|RETIRAR\w*)|REMOÇÃO\s+DE|RETIRADA\s+DE)\b', '', conteudo_limpo, flags=re.IGNORECASE)
@@ -126,48 +131,27 @@ def _extrair_servicos_agrupados(textos):
                 
                 if len(sujeito) > 1:
                     nome_padronizado = f"{sujeito.upper()} A REMOVER"
-                    if nome_padronizado not in contagem_rem:
-                        contagem_rem[nome_padronizado] = {'posicoes': set(), 'metragem_total': 0.0, 'tem_metragem': False}
+                    chave = (nome_padronizado, pos_xy)
                     
-                    if pos_xy not in contagem_rem[nome_padronizado]['posicoes']:
-                        contagem_rem[nome_padronizado]['posicoes'].add(pos_xy)
-                        if metragem_val is not None:
-                            contagem_rem[nome_padronizado]['metragem_total'] += metragem_val
-                            contagem_rem[nome_padronizado]['tem_metragem'] = True
-
-    # ---- Resolve os valores finais ----
-    demolicoes_final = []
-    for nome, dados in contagem_dem.items():
-        qtd = len(dados['posicoes'])
-        is_continuo = any(k in nome for k in ['DUTO', 'FIAÇÃO', 'CABO', 'ALVENARIA', 'PLATIBANDA', 'PISO'])
-        # Verifica se é um item de volume/m³ estrutural
-        is_pilar_estrutural = any(k in nome for k in ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'PILAR', 'POSTE', 'FUNDAÇÃO', 'VIGA', 'LAJE'])
-        
-        if is_continuo:
-            valor = dados['metragem_total'] if dados['tem_metragem'] else ""
-        elif is_pilar_estrutural:
-            valor = "" # Deixa vazio para não confundir unidades com m³
-        else:
-            valor = qtd 
-            
-        demolicoes_final.append((nome, valor))
-
-    remocoes_final = []
-    for nome, dados in contagem_rem.items():
-        qtd = len(dados['posicoes'])
-        is_continuo = any(k in nome for k in ['DUTO', 'FIAÇÃO', 'FIACAO', 'CABO'])
-        
-        if is_continuo:
-            valor = dados['metragem_total'] if dados['tem_metragem'] else ""
-        else:
-            valor = qtd
-            
-        remocoes_final.append((nome, valor))
+                    if chave not in seen_rem:
+                        seen_rem.add(chave)
+                        counter_rem[nome_padronizado] = counter_rem.get(nome_padronizado, 0) + 1
+                        idx = counter_rem[nome_padronizado]
+                        
+                        nome_exibicao = nome_padronizado if idx == 1 else f"{nome_padronizado} ({idx})"
+                        
+                        is_continuo = any(k in nome_padronizado for k in ['DUTO', 'FIAÇÃO', 'FIACAO', 'CABO'])
+                        
+                        if is_continuo:
+                            valor = metragem_val if metragem_val is not None else ""
+                        else:
+                            valor = 1
+                            
+                        remocoes_final.append((nome_exibicao, valor))
 
     return remocoes_final, demolicoes_final
 
 def escrever(ws, linha, coluna, valor):
-    # Se o valor for vazio, a função não escreve nada, mantendo a célula limpa
     if valor is None or valor == "": return 
     
     celula = ws.cell(row=linha, column=coluna)
@@ -179,13 +163,9 @@ def escrever(ws, linha, coluna, valor):
     else:
         celula.value = valor
 
-# =====================================================================
-# FUNÇÃO PRINCIPAL
-# =====================================================================
-
 def extrair_servicos_preliminares_para_xlsx(dados_json: dict, template_path: str = None) -> bytes:
     log.info("=" * 60)
-    log.info("INÍCIO — Serviços Preliminares (Proteção de Volumes m³)")
+    log.info("INÍCIO")
     log.info("=" * 60)
 
     if 'entidades' not in dados_json:
@@ -219,7 +199,6 @@ def extrair_servicos_preliminares_para_xlsx(dados_json: dict, template_path: str
         elif "demolições" in texto_linha and "1.8" in texto_linha:
             linha_inicio_demolicoes = r + 6
 
-    # ── Preenchimento das Remoções ──
     if linha_inicio_remocoes:
         for i, (nome, valor) in enumerate(itens_remocao[:MAX_ITENS]):
             linha = linha_inicio_remocoes + i
@@ -232,7 +211,6 @@ def extrair_servicos_preliminares_para_xlsx(dados_json: dict, template_path: str
             else:
                 escrever(ws, linha, col_id, valor)
 
-    # ── Preenchimento das Demolições ──
     if linha_inicio_demolicoes:
         for i, (nome, valor) in enumerate(itens_demolicao[:MAX_ITENS]):
             linha = linha_inicio_demolicoes + i
@@ -242,7 +220,6 @@ def extrair_servicos_preliminares_para_xlsx(dados_json: dict, template_path: str
             if col_id is not None:
                 escrever(ws, linha, col_id, valor)
 
-    log.info("CONCLUÍDO — Guardando ficheiro...")
     output = io.BytesIO()
     wb.save(output)
     

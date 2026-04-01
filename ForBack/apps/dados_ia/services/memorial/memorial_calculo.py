@@ -14,7 +14,7 @@ logging.basicConfig(
     format="[%(asctime)s] %(levelname)s — %(message)s",
     datefmt="%H:%M:%S",
 )
-log = logging.getLogger("levantamento_campo")
+log = logging.getLogger("processamento_planilhas")
 
 MAX_AMBIENTES = 80
 MAX_ITENS = 80
@@ -42,10 +42,6 @@ COL_AMB_VAOS  = 10
 COL_EST_PILAR_C = 5
 COL_EST_PILAR_L = 6
 COL_EST_PILAR_H = 7
-COL_EST_PILAR_QTD = 8
-
-COL_EST_VIGA_C  = 9
-COL_EST_LAJE_C  = 13
 
 COL_ELE_QUADROS  = 5
 COL_ELE_CONDULE  = 6
@@ -80,6 +76,7 @@ COL_REDE_TOMADAS    = 7
 COL_REDE_DUTOS_TIPO = 8
 COL_REDE_DUTOS_M    = 9
 COL_REDE_CABOS      = 10
+
 COL_SPDA_CAPTACAO   = 11
 COL_SPDA_CONDULE    = 12
 COL_SPDA_ATERR      = 13
@@ -108,14 +105,160 @@ COL_COB_TEL_L      = 14
 COL_COB_TEL_C      = 15
 COL_COB_TEL_E      = 16
 
+SOLO_LINHA_TERRAPLANAGEM = 17   
+SOLO_LINHA_ATERRO        = 43  
+SOLO_LINHA_ENROCAMENTO   = 69 
+SOLO_LINHA_CONTENCAO     = 95  
+SOLO_LINHA_TALUDAMENTO   = 121  
+SOLO_LINHA_NIVELAMENTO   = 148
+
+TERRA_COL_AMB    = 2
+TERRA_COL_TIPO   = 5
+TERRA_COL_H      = 9
+TERRA_COL_LASTRO = 10
+TERRA_COL_V      = 12
+
+SOLO_COL_AMB = 2
+SOLO_COL_I   = 5
+SOLO_COL_V   = 10
+
 CAMINHO_TEMPLATE = Path(__file__).resolve().parent / "templates_excel" / "Memorial de Cálculo - Modelo.xlsx"
 
-def _clean_text(raw):
+def _clean_text_ambientes(raw):
     if not raw: return ""
     t = re.sub(r'\{[^{}]*\}', '', raw)
     t = re.sub(r'\\[a-zA-Z0-9]+\d*\.?.?x?;', ' ', t)
     t = re.sub(r'\s+', ' ', t)
     return t.strip().strip('\\{}()[]').strip()
+
+def _clean_text_servicos(raw):
+    if not raw: return ""
+    t = re.sub(r'\{[^{}]*\}', '', raw)
+    t = re.sub(r'\\[a-zA-Z0-9]+\d*\.?.?x?;', ' ', t)
+    t = t.replace('\\P', ' ').replace('\\p', ' ')
+    t = re.sub(r'\s+', ' ', t)
+    return t.strip()
+
+def get_coluna_remocao(nome):
+    nome = nome.upper()
+    if "CONDULETE" in nome: return 5
+    if "TOMADA" in nome: return 6
+    if "INTERRUPTOR" in nome: return 7
+    if "LUMIN" in nome: return 8
+    if "DUTO" in nome or "FIAÇÃO" in nome or "FIACAO" in nome or "CABO" in nome: return 10
+    if "CAPTAÇÃO" in nome or "CAPTACAO" in nome: return 11
+    if "ATERRA" in nome: return 12
+    if "QUADRO" in nome: return 13
+    if "POSTE" in nome or re.search(r'\bP\d+\b', nome): return 14
+    if "CAVALETE" in nome: return 15
+    if "RESERVAT" in nome: return 16
+    if "REGISTRO" in nome: return 17
+    if "VÁLVULA" in nome or "VALVULA" in nome: return 18
+    if "TORNEIRA" in nome: return 19
+    if "CALHA" in nome: return 21
+    if "CAIXA" in nome: return 22
+    if "DRENO" in nome: return 23
+    if "PORTA" in nome: return 24
+    if "JANELA" in nome or "ESQUADRIA" in nome: return 25
+    if "TELHA" in nome: return 26
+    if "TRAMA" in nome: return 27
+    if "TESOURA" in nome: return 28
+    return "GENERICO" 
+
+def get_coluna_demolicao(nome):
+    nome = nome.upper()
+    if "PISO" in nome: return 5
+    if "RODAPÉ" in nome or "RODAPE" in nome: return 6
+    if "AZULEJO" in nome: return 7
+    if "FORRO" in nome: return 8
+    if "ALVENARIA" in nome or "PLATIBANDA" in nome: return 10
+    if "FUNDAÇÃO" in nome or "FUNDACAO" in nome: return 11
+    if "PILAR" in nome or "POSTE" in nome or re.search(r'\bP\d+\b', nome): return 12
+    return None
+
+def _extrair_servicos_agrupados(textos):
+    demolicoes_final = []
+    remocoes_final = []
+    seen_dem = set()
+    seen_rem = set()
+    counter_dem = {}
+    counter_rem = {}
+    ruidos = ['PLANTA', 'APENAS', 'LEGENDA', 'ESCALA']
+    
+    for t in textos:
+        c = t.get('conteudo', '')
+        if not c: continue
+        c_upper = c.upper()
+        if any(r in c_upper for r in ruidos): continue
+        raw_pos = t.get('posicao', [0, 0])
+        pos_xy = tuple(round(p, 1) for p in raw_pos[:2])
+        conteudo_limpo = _clean_text_servicos(c)
+        match_metragem = re.search(r'(\d+[.,]?\d*)\s*(m|metros)\b', conteudo_limpo, re.IGNORECASE)
+        metragem_val = float(match_metragem.group(1).replace(',','.')) if match_metragem else None
+        
+        is_demolicao = any(k in c_upper for k in ['DEMOL', 'DEMOLIÇÃO', 'DEMOLIDA', 'DEMOLIDO'])
+        is_remocao = any(k in c_upper for k in ['REMOV', 'REMOÇÃO', 'RETIRAR', 'REMOVIDO', 'REMOVIDA'])
+        
+        if is_demolicao:
+            if c_upper.strip() not in ['A DEMOLIR', 'DEMOLIÇÃO', 'DEMOLIR', 'A SER DEMOLIDA', 'A SER DEMOLIDO']:
+                sujeito = re.sub(r'\bA\s+(SER\s+)?DEMOL\w+\b(\s*/\s*REATERRAR)?', '', conteudo_limpo, flags=re.IGNORECASE)
+                sujeito = re.sub(r'\(\s*\)', '', sujeito)
+                sujeito = re.sub(r'-\s*$', '', sujeito).strip()
+                if len(sujeito) > 1:
+                    nome_padronizado = f"{sujeito.upper()} A DEMOLIR"
+                    chave = (nome_padronizado, pos_xy)
+                    if chave not in seen_dem:
+                        seen_dem.add(chave)
+                        counter_dem[nome_padronizado] = counter_dem.get(nome_padronizado, 0) + 1
+                        idx = counter_dem[nome_padronizado]
+                        nome_exibicao = nome_padronizado if idx == 1 else f"{nome_padronizado} ({idx})"
+                        is_continuo = any(k in nome_padronizado for k in ['DUTO', 'FIAÇÃO', 'CABO', 'ALVENARIA', 'PLATIBANDA', 'PISO'])
+                        is_pilar_estrutural = any(k in nome_padronizado for k in ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'PILAR', 'POSTE', 'FUNDAÇÃO'])
+                        if is_continuo:
+                            valor = metragem_val if metragem_val is not None else ""
+                        elif is_pilar_estrutural:
+                            valor = ""
+                        else:
+                            valor = 1
+                        demolicoes_final.append((nome_exibicao, valor))
+                        
+        if is_remocao and not is_demolicao:
+            if c_upper.strip() not in ['A REMOVER', 'REMOÇÃO', 'REMOVER', 'A RETIRAR', 'RETIRAR']:
+                sujeito = re.sub(r'\b(A\s+(SER\s+)?(REMOV\w+|RETIRAR\w*)|REMOÇÃO\s+DE|RETIRADA\s+DE)\b', '', conteudo_limpo, flags=re.IGNORECASE)
+                sujeito = re.sub(r'\(\s*\)', '', sujeito)
+                sujeito = re.sub(r'-\s*$', '', sujeito).strip()
+                if len(sujeito) > 1:
+                    nome_padronizado = f"{sujeito.upper()} A REMOVER"
+                    chave = (nome_padronizado, pos_xy)
+                    if chave not in seen_rem:
+                        seen_rem.add(chave)
+                        counter_rem[nome_padronizado] = counter_rem.get(nome_padronizado, 0) + 1
+                        idx = counter_rem[nome_padronizado]
+                        nome_exibicao = nome_padronizado if idx == 1 else f"{nome_padronizado} ({idx})"
+                        is_continuo = any(k in nome_padronizado for k in ['DUTO', 'FIAÇÃO', 'FIACAO', 'CABO'])
+                        if is_continuo:
+                            valor = metragem_val if metragem_val is not None else ""
+                        else:
+                            valor = 1
+                        remocoes_final.append((nome_exibicao, valor))
+                        
+    return remocoes_final, demolicoes_final
+
+def escrever(ws, linha, coluna, valor):
+    if valor is None or valor == "": return 
+    celula = ws.cell(row=linha, column=coluna)
+    if isinstance(celula, MergedCell):
+        for rng in ws.merged_cells.ranges:
+            if celula.coordinate in rng:
+                ws.cell(row=rng.min_row, column=rng.min_col).value = valor
+                return
+    else:
+        celula.value = valor
+
+def _escrever_linha_padrao_solo(ws, linha, nome, inclinacao, volume):
+    escrever(ws, linha, SOLO_COL_AMB, nome)
+    escrever(ws, linha, SOLO_COL_I,   inclinacao if nome else None)
+    escrever(ws, linha, SOLO_COL_V,   volume if nome else None)
 
 def _comp_fuzzy(entidades, palavra_chave):
     total = 0.0
@@ -174,16 +317,11 @@ def _extrair_dxf_por_ambiente(entidades, textos, blocos, ambientes):
     if not ambientes:
         return {}
 
-    estruturas_mapeadas = {a['nome']: {'pilares': [], 'vigas': [], 'lajes': []} for a in ambientes if a.get('nome')}
+    estruturas_mapeadas = {a['nome']: {'pilares': []} for a in ambientes if a.get('nome')}
     
     for e in entidades:
         layer = e.get('layer', '').upper()
-        tipo_est = None
-        if 'PILAR' in layer: tipo_est = 'pilares'
-        elif 'VIGA' in layer: tipo_est = 'vigas'
-        elif 'LAJE' in layer: tipo_est = 'lajes'
-        
-        if tipo_est:
+        if 'PILAR' in layer:
             d = e.get('dados', {})
             tipo = e.get('tipo', '')
             pos = None
@@ -218,7 +356,7 @@ def _extrair_dxf_por_ambiente(entidades, textos, blocos, ambientes):
                         amb_alvo = nome
                         
                 if amb_alvo:
-                    estruturas_mapeadas[amb_alvo][tipo_est].append({
+                    estruturas_mapeadas[amb_alvo]['pilares'].append({
                         'comp': comp,
                         'pos': pos,
                         'is_poly': is_poly,
@@ -237,7 +375,7 @@ def _extrair_dxf_por_ambiente(entidades, textos, blocos, ambientes):
     nomes_amb = [a['nome'].upper() for a in ambientes if a.get('nome')]
 
     for t in textos:
-        conteudo = _clean_text(t.get('conteudo', '')).upper()
+        conteudo = _clean_text_ambientes(t.get('conteudo', '')).upper()
         if not conteudo:
             continue
         tem_ele = False
@@ -288,7 +426,7 @@ def _extrair_dxf_por_ambiente(entidades, textos, blocos, ambientes):
         frac = area / total_area if total_area > 0 else 1.0 / len(ambientes)
         h_amb = amb.get('h', PD_PADRAO)
 
-        est_amb = estruturas_mapeadas.get(nome, {'pilares': [], 'vigas': [], 'lajes': []})
+        est_amb = estruturas_mapeadas.get(nome, {'pilares': []})
         
         pilares_info = []
         linhas_p = []
@@ -317,22 +455,18 @@ def _extrair_dxf_por_ambiente(entidades, textos, blocos, ambientes):
 
         pilares_agrupados = Counter((p['c'], p['l'], p['h']) for p in pilares_info)
         
-        c_pilar = l_pilar = h_pilar = qtd_pilares = None
+        c_pilar = l_pilar = h_pilar = None
         
         if pilares_agrupados:
-            (c, l, h), qtd = pilares_agrupados.most_common(1)[0]
+            (c, l, h), _ = pilares_agrupados.most_common(1)[0]
             c_pilar = c
             l_pilar = l
             h_pilar = h
-            qtd_pilares = qtd
 
         estr = {
             'pilares_c': c_pilar,
             'pilares_l': l_pilar,
-            'pilares_h': h_pilar,
-            'pilares_qtd': qtd_pilares,
-            'vigas': round(sum(v['comp'] for v in est_amb['vigas']), 2),
-            'lajes': round(sum(l['comp'] for l in est_amb['lajes']), 2)
+            'pilares_h': h_pilar
         }
 
         ele = ele_por_amb.get(nome, {'tomadas': 0, 'interruptores': 0, 'luminarias': 0, 'quadros': 0, 'conduletes': 0})
@@ -342,17 +476,6 @@ def _extrair_dxf_por_ambiente(entidades, textos, blocos, ambientes):
         por_ambiente[nome] = {'estrutura': estr, 'eletrica': ele}
 
     return por_ambiente
-
-def escrever(ws, linha, coluna, valor):
-    if valor is None: return
-    celula = ws.cell(row=linha, column=coluna)
-    if isinstance(celula, MergedCell):
-        for rng in ws.merged_cells.ranges:
-            if celula.coordinate in rng:
-                ws.cell(row=rng.min_row, column=rng.min_col).value = valor
-                break
-    else:
-        celula.value = valor
 
 def _extrair_ambientes_super(textos):
     ambientes = []
@@ -372,10 +495,10 @@ def _extrair_ambientes_super(textos):
         nome_raw = ""
         if area_idx > 0:
             for p in parts[:area_idx]:
-                p_c = _clean_text(p)
+                p_c = _clean_text_ambientes(p)
                 nome_raw += (" " + p_c) if nome_raw else p_c
         else:
-            nome_raw = _clean_text(parts[0])
+            nome_raw = _clean_text_ambientes(parts[0])
         nome_final = nome_raw.upper().strip()
         if len(nome_final) < 2 or nome_final in seen: continue
         if area_match or any(k in nome_final for k in keywords):
@@ -449,17 +572,6 @@ def _preencher_rede_spda(ws, linha, amb: dict):
     escrever(ws, linha, COL_SPDA_CONDULE, amb.get('caixasInspecao'))
     escrever(ws, linha, COL_SPDA_ATERR, amb.get('hastesAterramento'))
 
-def _preencher_estruturas(ws, linha, amb: dict):
-    escrever(ws, linha, 2, amb.get('nome'))
-    sup = amb.get('superestrutura', [])
-    pilares = [s for s in sup if 'pilar' in (s.get('tipo') or '').lower()]
-    vigas = [s for s in sup if 'viga' in (s.get('tipo') or '').lower()]
-    lajes = [s for s in sup if 'laje' in (s.get('tipo') or '').lower()]
-    if pilares: escrever(ws, linha, COL_EST_PILAR_C, round(sum(float(p.get('largura') or 0) for p in pilares), 2))
-    if vigas: escrever(ws, linha, COL_EST_VIGA_C, round(sum(float(v.get('largura') or 0) for v in vigas), 2))
-    if lajes: escrever(ws, linha, COL_EST_LAJE_C, round(sum(float(l.get('largura') or 0) for l in lajes), 2))
-    if amb.get('fundacoes'): escrever(ws, linha, 14, round(sum(float(f.get('profundidade') or 0) for f in amb['fundacoes']), 2))
-
 def _preencher_incendio(ws, linha, amb: dict):
     escrever(ws, linha, 2, amb.get('nome'))
     ext = amb.get('extintores', [])
@@ -485,113 +597,6 @@ def _preencher_cobertura(ws, linha, amb: dict):
     if amb.get('pecas'):
         desc = ", ".join(f"{p.get('descricao','')} {p.get('secao','')}".strip() for p in amb['pecas'])
         escrever(ws, linha, COL_COB_EST_TIPO, f"{amb.get('tipoEstrutura','')} | {desc}".strip(' |'))
-
-def _extrair_servicos_agrupados(textos):
-    demolicoes_final = []
-    remocoes_final = []
-    seen_dem = set()
-    seen_rem = set()
-    counter_dem = {}
-    counter_rem = {}
-    ruidos = ['PLANTA', 'APENAS', 'LEGENDA', 'ESCALA']
-    
-    for t in textos:
-        c = t.get('conteudo', '')
-        if not c: continue
-        c_upper = c.upper()
-        if any(r in c_upper for r in ruidos): continue
-        raw_pos = t.get('posicao', [0, 0])
-        pos_xy = tuple(round(p, 1) for p in raw_pos[:2])
-        conteudo_limpo = _clean_text(c)
-        match_metragem = re.search(r'(\d+[.,]?\d*)\s*(m|metros)\b', conteudo_limpo, re.IGNORECASE)
-        metragem_val = float(match_metragem.group(1).replace(',','.')) if match_metragem else None
-        
-        is_demolicao = any(k in c_upper for k in ['DEMOL', 'DEMOLIÇÃO', 'DEMOLIDA', 'DEMOLIDO'])
-        is_remocao = any(k in c_upper for k in ['REMOV', 'REMOÇÃO', 'RETIRAR', 'REMOVIDO', 'REMOVIDA'])
-        
-        if is_demolicao:
-            if c_upper.strip() not in ['A DEMOLIR', 'DEMOLIÇÃO', 'DEMOLIR', 'A SER DEMOLIDA', 'A SER DEMOLIDO']:
-                sujeito = re.sub(r'\bA\s+(SER\s+)?DEMOL\w+\b(\s*/\s*REATERRAR)?', '', conteudo_limpo, flags=re.IGNORECASE)
-                sujeito = re.sub(r'\(\s*\)', '', sujeito)
-                sujeito = re.sub(r'-\s*$', '', sujeito).strip()
-                if len(sujeito) > 1:
-                    nome_padronizado = f"{sujeito.upper()} A DEMOLIR"
-                    chave = (nome_padronizado, pos_xy)
-                    if chave not in seen_dem:
-                        seen_dem.add(chave)
-                        counter_dem[nome_padronizado] = counter_dem.get(nome_padronizado, 0) + 1
-                        idx = counter_dem[nome_padronizado]
-                        nome_exibicao = nome_padronizado if idx == 1 else f"{nome_padronizado} ({idx})"
-                        is_continuo = any(k in nome_padronizado for k in ['DUTO', 'FIAÇÃO', 'CABO', 'ALVENARIA', 'PLATIBANDA', 'PISO'])
-                        is_pilar_estrutural = any(k in nome_padronizado for k in ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'PILAR', 'POSTE', 'FUNDAÇÃO', 'VIGA', 'LAJE'])
-                        if is_continuo:
-                            valor = metragem_val if metragem_val is not None else ""
-                        elif is_pilar_estrutural:
-                            valor = ""
-                        else:
-                            valor = 1
-                        demolicoes_final.append((nome_exibicao, valor))
-                        
-        if is_remocao and not is_demolicao:
-            if c_upper.strip() not in ['A REMOVER', 'REMOÇÃO', 'REMOVER', 'A RETIRAR', 'RETIRAR']:
-                sujeito = re.sub(r'\b(A\s+(SER\s+)?(REMOV\w+|RETIRAR\w*)|REMOÇÃO\s+DE|RETIRADA\s+DE)\b', '', conteudo_limpo, flags=re.IGNORECASE)
-                sujeito = re.sub(r'\(\s*\)', '', sujeito)
-                sujeito = re.sub(r'-\s*$', '', sujeito).strip()
-                if len(sujeito) > 1:
-                    nome_padronizado = f"{sujeito.upper()} A REMOVER"
-                    chave = (nome_padronizado, pos_xy)
-                    if chave not in seen_rem:
-                        seen_rem.add(chave)
-                        counter_rem[nome_padronizado] = counter_rem.get(nome_padronizado, 0) + 1
-                        idx = counter_rem[nome_padronizado]
-                        nome_exibicao = nome_padronizado if idx == 1 else f"{nome_padronizado} ({idx})"
-                        is_continuo = any(k in nome_padronizado for k in ['DUTO', 'FIAÇÃO', 'FIACAO', 'CABO'])
-                        if is_continuo:
-                            valor = metragem_val if metragem_val is not None else ""
-                        else:
-                            valor = 1
-                        remocoes_final.append((nome_exibicao, valor))
-                        
-    return remocoes_final, demolicoes_final
-
-def get_coluna_remocao(nome):
-    nome = nome.upper()
-    if "CONDULETE" in nome: return 5
-    if "TOMADA" in nome: return 6
-    if "INTERRUPTOR" in nome: return 7
-    if "LUMIN" in nome: return 8
-    if "DUTO" in nome or "FIAÇÃO" in nome or "FIACAO" in nome or "CABO" in nome: return 10
-    if "CAPTAÇÃO" in nome or "CAPTACAO" in nome: return 11
-    if "ATERRA" in nome: return 12
-    if "QUADRO" in nome: return 13
-    if "POSTE" in nome or re.search(r'\bP\d+\b', nome): return 14
-    if "CAVALETE" in nome: return 15
-    if "RESERVAT" in nome: return 16
-    if "REGISTRO" in nome: return 17
-    if "VÁLVULA" in nome or "VALVULA" in nome: return 18
-    if "TORNEIRA" in nome: return 19
-    if "CALHA" in nome: return 21
-    if "CAIXA" in nome: return 22
-    if "DRENO" in nome: return 23
-    if "PORTA" in nome: return 24
-    if "JANELA" in nome or "ESQUADRIA" in nome: return 25
-    if "TELHA" in nome: return 26
-    if "TRAMA" in nome: return 27
-    if "TESOURA" in nome: return 28
-    return "GENERICO" 
-
-def get_coluna_demolicao(nome):
-    nome = nome.upper()
-    if "PISO" in nome: return 5
-    if "RODAPÉ" in nome or "RODAPE" in nome: return 6
-    if "AZULEJO" in nome: return 7
-    if "FORRO" in nome: return 8
-    if "ALVENARIA" in nome or "PLATIBANDA" in nome: return 10
-    if "FUNDAÇÃO" in nome or "FUNDACAO" in nome: return 11
-    if "PILAR" in nome or "POSTE" in nome or re.search(r'\bP\d+\b', nome): return 12
-    if "VIGA" in nome: return 13
-    if "LAJE" in nome: return 14
-    return None
 
 def mesclar_form_com_dxf(dados_form: dict | list, dados_dxf: dict) -> dict:
     entidades = dados_dxf.get('entidades', [])
@@ -622,63 +627,41 @@ def mesclar_form_com_dxf(dados_form: dict | list, dados_dxf: dict) -> dict:
     resultado['blocos'] = dados_dxf.get('blocos', [])
     return resultado
 
-def extrair_levantamento_campo_para_xlsx(dados_json: dict, ambiente_obj=None, template_path: str = None) -> bytes:
+def extrair_memorial_calculo(dados_json: dict, ambiente_obj=None, template_path: str = None) -> bytes:
     is_form = 'ambientes' in dados_json
 
     if not is_form:
         if 'entidades' not in dados_json:
             for val in dados_json.values():
                 if isinstance(val, dict) and 'entidades' in val:
-                    dados_json = val
-                    break
+                    dados_json = val; break
                 if isinstance(val, str):
                     try:
                         parsed = json.loads(val)
-                        if 'entidades' in parsed:
-                            dados_json = parsed
-                            break
-                    except Exception:
-                        pass
+                        if 'entidades' in parsed: dados_json = parsed; break
+                    except Exception: pass
 
     entidades = dados_json.get('entidades', [])
-    textos = dados_json.get('textos', []) or [
-        e for e in entidades if e.get('tipo') in ('MTEXT', 'TEXT')
-    ]
+    textos = dados_json.get('textos', []) or [e for e in entidades if e.get('tipo') in ('MTEXT', 'TEXT')]
     blocos = dados_json.get('blocos', [])
 
-    if is_form:
-        ambientes = dados_json['ambientes']
-    else:
-        ambientes = _extrair_ambientes_super(textos)
-
+    ambientes = dados_json['ambientes'] if is_form else _extrair_ambientes_super(textos)
     dxf_por_amb = _extrair_dxf_por_ambiente(entidades, textos, blocos, ambientes) if entidades else {}
 
-    vigas     = _comp_fuzzy(entidades, 'VIGA')
-    lajes     = _comp_fuzzy(entidades, 'LAJE')
-    pilares   = _comp_fuzzy(entidades, 'PILAR')
-    fundacoes = _comp_fuzzy(entidades, 'FUNDAÇÃO') + _comp_fuzzy(entidades, 'BALDRAME') + _comp_fuzzy(entidades, 'SAPATA')
-    eletrica  = _comp_fuzzy(entidades, 'FIAÇÃO') + _comp_fuzzy(entidades, 'ELETRODUTO') + _comp_fuzzy(entidades, 'ELETROCALHA') + _comp_fuzzy(entidades, 'CONDUITE')
-    hidro_af  = _comp_fuzzy(entidades, 'ÁGUA FRIA') + _comp_fuzzy(entidades, 'AGUA FRIA') + _comp_fuzzy(entidades, 'HIDRÁULICA') + _comp_fuzzy(entidades, 'HIDRAULICA')
-    hidro_ap  = _comp_fuzzy(entidades, 'ÁGUA PLUVIAL') + _comp_fuzzy(entidades, 'AGUA PLUVIAL') + _comp_fuzzy(entidades, 'PLUVIAL')
-    hidro_esg = _comp_fuzzy(entidades, 'ESGOTO')
-    incendio  = _comp_fuzzy(entidades, 'INCÊNDIO') + _comp_fuzzy(entidades, 'INCENDIO') + _comp_fuzzy(entidades, 'SPRINKLER') + _comp_fuzzy(entidades, 'HIDRANTE')
-    spda_barra= _comp_fuzzy(entidades, 'BARRA CHATA') + _comp_fuzzy(entidades, 'SPDA')
-    spda_malha= _comp_fuzzy(entidades, 'MALHA') + _comp_fuzzy(entidades, 'TERRA') + _comp_fuzzy(entidades, 'ATERRAMENTO')
-    spda_term = sum(1 for e in entidades if any(t in e.get('layer', '').upper() for t in ['TERMINAL AÉREO', 'TERMINAL AEREO', 'CAPTOR']))
-    cav       = sum(1 for t in textos if any(w in t.get("conteudo", "").lower() for w in ["cavalete", "cavaletes", "cav."]))
-
+    eletrica  = _comp_fuzzy(entidades, 'FIAÇÃO') + _comp_fuzzy(entidades, 'ELETRODUTO')
+    hidro_af  = _comp_fuzzy(entidades, 'ÁGUA FRIA') + _comp_fuzzy(entidades, 'HIDRAULICA')
+    incendio  = _comp_fuzzy(entidades, 'INCÊNDIO') + _comp_fuzzy(entidades, 'HIDRANTE')
     itens_remocao, itens_demolicao = _extrair_servicos_agrupados(textos)
 
     tpl = Path(template_path) if template_path else CAMINHO_TEMPLATE
     wb  = openpyxl.load_workbook(str(tpl))
     
     ws_lev = wb['Levantamento Campo']
-    
-    ws_serv = wb['Serviços Preliminares'] if 'Serviços Preliminares' in wb.sheetnames else None
+    ws_serv = wb['Serviços Preliminares']
+    ws_solo = wb['Movimento de Solo'] 
 
     for nome_aba in wb.sheetnames:
-        if nome_aba == 'Levantamento Campo':
-            continue
+        if nome_aba == 'Levantamento Campo': continue
         aba = wb[nome_aba]
         for row in aba.iter_rows():
             for cell in row:
@@ -686,19 +669,16 @@ def extrair_levantamento_campo_para_xlsx(dados_json: dict, ambiente_obj=None, te
                     cell.value = None
 
     for i, amb in enumerate(ambientes[:MAX_AMBIENTES]):
-        r_amb = LINHA_INI_AMBIENTES  + i
-        r_ele = LINHA_INI_ELETRICA   + i
-        r_hid = LINHA_INI_HIDRAULICA + i
-        r_red = LINHA_INI_REDE       + i
-        r_inc = LINHA_INI_INCENDIO   + i
-        r_cob = LINHA_INI_COBERTURA  + i
-        r_est = LINHA_INI_ESTRUTURAS + i
+        r_amb, r_ele, r_hid, r_red, r_inc, r_cob, r_est = (
+            LINHA_INI_AMBIENTES + i, LINHA_INI_ELETRICA + i, LINHA_INI_HIDRAULICA + i,
+            LINHA_INI_REDE + i, LINHA_INI_INCENDIO + i, LINHA_INI_COBERTURA + i, LINHA_INI_ESTRUTURAS + i
+        )
 
         _preencher_amb_base(ws_lev, r_amb, amb)
 
         nome_amb = (amb.get('nome') or '').upper().strip()
         dxf_data = dxf_por_amb.get(nome_amb, {})
-        dxf_est = dxf_data.get('estrutura', {})
+        dxf_est = dxf_data.get('estrutura', {}) 
         dxf_ele = dxf_data.get('eletrica', {})
 
         if is_form:
@@ -707,22 +687,20 @@ def extrair_levantamento_campo_para_xlsx(dados_json: dict, ambiente_obj=None, te
             _preencher_rede_spda(ws_lev, r_red, amb)
             _preencher_incendio(ws_lev, r_inc, amb)
             _preencher_cobertura(ws_lev, r_cob, amb)
-            _preencher_estruturas(ws_lev, r_est, amb)
         else:
             escrever(ws_lev, r_ele, 2, amb.get('nome'))
             escrever(ws_lev, r_hid, 2, amb.get('nome'))
             escrever(ws_lev, r_red, 2, amb.get('nome'))
             escrever(ws_lev, r_inc, 2, amb.get('nome'))
 
-        escrever(ws_lev, r_est, 2, amb.get('nome'))
-        
-        escrever(ws_lev, r_est, COL_EST_PILAR_C, dxf_est.get('pilares_c'))
-        escrever(ws_lev, r_est, COL_EST_PILAR_L, dxf_est.get('pilares_l'))
-        escrever(ws_lev, r_est, COL_EST_PILAR_H, dxf_est.get('pilares_h'))
-        escrever(ws_lev, r_est, COL_EST_PILAR_QTD, dxf_est.get('pilares_qtd')) 
-        
-        escrever(ws_lev, r_est, COL_EST_VIGA_C, dxf_est.get('vigas'))
-        escrever(ws_lev, r_est, COL_EST_LAJE_C, dxf_est.get('lajes'))
+        tem_pilares = dxf_est.get('pilares_c') or dxf_est.get('pilares_l')
+        if tem_pilares:
+            escrever(ws_lev, r_est, 2, amb.get('nome'))
+            escrever(ws_lev, r_est, COL_EST_PILAR_C, dxf_est.get('pilares_c'))
+            escrever(ws_lev, r_est, COL_EST_PILAR_L, dxf_est.get('pilares_l'))
+            escrever(ws_lev, r_est, COL_EST_PILAR_H, dxf_est.get('pilares_h'))
+        else:
+            escrever(ws_lev, r_est, 2, "")
 
         if not amb.get('tomadas'):
             escrever(ws_lev, r_ele, COL_ELE_QUADROS, dxf_ele.get('quadros') or None)
@@ -733,47 +711,49 @@ def extrair_levantamento_campo_para_xlsx(dados_json: dict, ambiente_obj=None, te
             escrever(ws_lev, r_ele, COL_ELE_DUTOS, dxf_ele.get('dutos_m') or None)
             escrever(ws_lev, r_ele, COL_ELE_CABOS, dxf_ele.get('cabos_m') or None)
 
+        area_s, inc_s, prof_s = float(amb.get('area') or 0.0), float(amb.get('inclinacaoTerreno') or 0.0), float(amb.get('profundidadeEscavacao') or 0.0)
+        vols = amb.get('volumes') or {}
+        v_terra, v_ater, v_enro, v_cont, v_talu, v_niv, v_comp = float(vols.get('terraplanagem') or 0.0), float(vols.get('aterro') or 0.0), float(vols.get('enrocamento') or 0.0), float(vols.get('contencao') or 0.0), float(vols.get('taludamento') or 0.0), float(vols.get('nivelamento') or 0.0), float(vols.get('compactacao') or 0.0)
+        v_esc = float(vols.get('escavacao') or 0.0) or round(area_s * prof_s, 2)
+
+        l_solo_terra = SOLO_LINHA_TERRAPLANAGEM + i
+        if v_terra > 0 or v_esc > 0 or prof_s > 0:
+            escrever(ws_solo, l_solo_terra, TERRA_COL_AMB, amb.get('nome'))
+            escrever(ws_solo, l_solo_terra, TERRA_COL_TIPO, 'Corte')
+            escrever(ws_solo, l_solo_terra, TERRA_COL_H, prof_s if prof_s > 0 else None)
+            escrever(ws_solo, l_solo_terra, TERRA_COL_V, v_esc if v_esc > 0 else v_terra)
+        else: escrever(ws_solo, l_solo_terra, TERRA_COL_AMB, None)
+
+        _escrever_linha_padrao_solo(ws_solo, SOLO_LINHA_ATERRO + i, amb.get('nome') if v_ater > 0 else None, inc_s, v_ater)
+        _escrever_linha_padrao_solo(ws_solo, SOLO_LINHA_ENROCAMENTO + i, amb.get('nome') if v_enro > 0 else None, None, v_enro)
+        _escrever_linha_padrao_solo(ws_solo, SOLO_LINHA_CONTENCAO + i, amb.get('nome') if v_cont > 0 else None, None, v_cont)
+        _escrever_linha_padrao_solo(ws_solo, SOLO_LINHA_TALUDAMENTO + i, amb.get('nome') if v_talu > 0 else None, None, v_talu)
+        v_total_n = round(v_niv + v_comp, 3)
+        _escrever_linha_padrao_solo(ws_solo, SOLO_LINHA_NIVELAMENTO + i, amb.get('nome') if v_total_n > 0 else None, None, v_total_n)
+
     ts = datetime.now().strftime("%d/%m/%Y %H:%M")
-    fonte = "FORM" if is_form else "CAD"
-    log_line = (
-        f"[AUTO] {ts} | {len(ambientes)} amb | Fonte: {fonte} | "
-        f"Vigas={vigas}m | Fiação={eletrica}m | "
-        f"Incêndio={incendio}m | AF={hidro_af}m"
-    )
+    log_line = f"[AUTO] {ts} | {len(ambientes)} amb | Fiação={eletrica}m | Incêndio={incendio}m"
     escrever(ws_lev, LINHA_LOG, 2, log_line)
 
-    if ws_serv:
-        linha_inicio_remocoes = None
-        linha_inicio_demolicoes = None
+    l_ini_rem, l_ini_dem = None, None
+    for r in range(1, 200):
+        val_l = str(ws_serv.cell(row=r, column=2).value or "").lower()
+        if "remoções" in val_l: l_ini_rem = r + 5
+        elif "demolições" in val_l: l_ini_dem = r + 6
 
-        for r in range(1, max(ws_serv.max_row + 1, 200)):
-            val_a = str(ws_serv.cell(row=r, column=1).value or "").strip().lower()
-            val_b = str(ws_serv.cell(row=r, column=2).value or "").strip().lower()
-            texto_linha = val_a + " " + val_b
-            
-            if "remoções" in texto_linha and "1.7" in texto_linha:
-                linha_inicio_remocoes = r + 5
-            elif "demolições" in texto_linha and "1.8" in texto_linha:
-                linha_inicio_demolicoes = r + 6
+    if l_ini_rem:
+        for i, (nome, valor) in enumerate(itens_remocao[:MAX_ITENS]):
+            linha = l_ini_rem + i
+            escrever(ws_serv, linha, 2, nome)
+            col_id = get_coluna_remocao(nome)
+            escrever(ws_serv, linha, 29 if col_id == "GENERICO" else col_id, valor)
 
-        if linha_inicio_remocoes:
-            for i, (nome, valor) in enumerate(itens_remocao[:MAX_ITENS]):
-                linha = linha_inicio_remocoes + i
-                ws_serv.cell(row=linha, column=2).value = nome 
-                col_id = get_coluna_remocao(nome)
-                if col_id == "GENERICO":
-                    escrever(ws_serv, linha, 29, nome) 
-                    escrever(ws_serv, linha, 31, valor)  
-                else:
-                    escrever(ws_serv, linha, col_id, valor)
-
-        if linha_inicio_demolicoes:
-            for i, (nome, valor) in enumerate(itens_demolicao[:MAX_ITENS]):
-                linha = linha_inicio_demolicoes + i
-                ws_serv.cell(row=linha, column=2).value = nome 
-                col_id = get_coluna_demolicao(nome)
-                if col_id is not None:
-                    escrever(ws_serv, linha, col_id, valor)
+    if l_ini_dem:
+        for i, (nome, valor) in enumerate(itens_demolicao[:MAX_ITENS]):
+            linha = l_ini_dem + i
+            escrever(ws_serv, linha, 2, nome)
+            col_id = get_coluna_demolicao(nome)
+            if col_id: escrever(ws_serv, linha, col_id, valor)
 
     output = io.BytesIO()
     wb.save(output)
