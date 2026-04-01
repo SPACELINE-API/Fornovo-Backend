@@ -105,6 +105,23 @@ COL_COB_TEL_L      = 14
 COL_COB_TEL_C      = 15
 COL_COB_TEL_E      = 16
 
+SOLO_LINHA_TERRAPLANAGEM = 17   
+SOLO_LINHA_ATERRO        = 43  
+SOLO_LINHA_ENROCAMENTO   = 69 
+SOLO_LINHA_CONTENCAO     = 95  
+SOLO_LINHA_TALUDAMENTO   = 121  
+SOLO_LINHA_NIVELAMENTO   = 148
+
+TERRA_COL_AMB    = 2
+TERRA_COL_TIPO   = 5
+TERRA_COL_H      = 9
+TERRA_COL_LASTRO = 10
+TERRA_COL_V      = 12
+
+SOLO_COL_AMB = 2
+SOLO_COL_I   = 5
+SOLO_COL_V   = 10
+
 CAMINHO_TEMPLATE = Path(__file__).resolve().parent / "templates_excel" / "Memorial de Cálculo - Modelo.xlsx"
 
 def _clean_text_ambientes(raw):
@@ -237,6 +254,11 @@ def escrever(ws, linha, coluna, valor):
                 return
     else:
         celula.value = valor
+
+def _escrever_linha_padrao_solo(ws, linha, nome, inclinacao, volume):
+    escrever(ws, linha, SOLO_COL_AMB, nome)
+    escrever(ws, linha, SOLO_COL_I,   inclinacao if nome else None)
+    escrever(ws, linha, SOLO_COL_V,   volume if nome else None)
 
 def _comp_fuzzy(entidades, palavra_chave):
     total = 0.0
@@ -612,42 +634,23 @@ def extrair_memorial_calculo(dados_json: dict, ambiente_obj=None, template_path:
         if 'entidades' not in dados_json:
             for val in dados_json.values():
                 if isinstance(val, dict) and 'entidades' in val:
-                    dados_json = val
-                    break
+                    dados_json = val; break
                 if isinstance(val, str):
                     try:
                         parsed = json.loads(val)
-                        if 'entidades' in parsed:
-                            dados_json = parsed
-                            break
-                    except Exception:
-                        pass
+                        if 'entidades' in parsed: dados_json = parsed; break
+                    except Exception: pass
 
     entidades = dados_json.get('entidades', [])
-    textos = dados_json.get('textos', []) or [
-        e for e in entidades if e.get('tipo') in ('MTEXT', 'TEXT')
-    ]
+    textos = dados_json.get('textos', []) or [e for e in entidades if e.get('tipo') in ('MTEXT', 'TEXT')]
     blocos = dados_json.get('blocos', [])
 
-    if is_form:
-        ambientes = dados_json['ambientes']
-    else:
-        ambientes = _extrair_ambientes_super(textos)
-
+    ambientes = dados_json['ambientes'] if is_form else _extrair_ambientes_super(textos)
     dxf_por_amb = _extrair_dxf_por_ambiente(entidades, textos, blocos, ambientes) if entidades else {}
 
-    pilares   = _comp_fuzzy(entidades, 'PILAR')
-    fundacoes = _comp_fuzzy(entidades, 'FUNDAÇÃO') + _comp_fuzzy(entidades, 'BALDRAME') + _comp_fuzzy(entidades, 'SAPATA')
-    eletrica  = _comp_fuzzy(entidades, 'FIAÇÃO') + _comp_fuzzy(entidades, 'ELETRODUTO') + _comp_fuzzy(entidades, 'ELETROCALHA') + _comp_fuzzy(entidades, 'CONDUITE')
-    hidro_af  = _comp_fuzzy(entidades, 'ÁGUA FRIA') + _comp_fuzzy(entidades, 'AGUA FRIA') + _comp_fuzzy(entidades, 'HIDRÁULICA') + _comp_fuzzy(entidades, 'HIDRAULICA')
-    hidro_ap  = _comp_fuzzy(entidades, 'ÁGUA PLUVIAL') + _comp_fuzzy(entidades, 'AGUA PLUVIAL') + _comp_fuzzy(entidades, 'PLUVIAL')
-    hidro_esg = _comp_fuzzy(entidades, 'ESGOTO')
-    incendio  = _comp_fuzzy(entidades, 'INCÊNDIO') + _comp_fuzzy(entidades, 'INCENDIO') + _comp_fuzzy(entidades, 'SPRINKLER') + _comp_fuzzy(entidades, 'HIDRANTE')
-    spda_barra= _comp_fuzzy(entidades, 'BARRA CHATA') + _comp_fuzzy(entidades, 'SPDA')
-    spda_malha= _comp_fuzzy(entidades, 'MALHA') + _comp_fuzzy(entidades, 'TERRA') + _comp_fuzzy(entidades, 'ATERRAMENTO')
-    spda_term = sum(1 for e in entidades if any(t in e.get('layer', '').upper() for t in ['TERMINAL AÉREO', 'TERMINAL AEREO', 'CAPTOR']))
-    cav       = sum(1 for t in textos if any(w in t.get("conteudo", "").lower() for w in ["cavalete", "cavaletes", "cav."]))
-
+    eletrica  = _comp_fuzzy(entidades, 'FIAÇÃO') + _comp_fuzzy(entidades, 'ELETRODUTO')
+    hidro_af  = _comp_fuzzy(entidades, 'ÁGUA FRIA') + _comp_fuzzy(entidades, 'HIDRAULICA')
+    incendio  = _comp_fuzzy(entidades, 'INCÊNDIO') + _comp_fuzzy(entidades, 'HIDRANTE')
     itens_remocao, itens_demolicao = _extrair_servicos_agrupados(textos)
 
     tpl = Path(template_path) if template_path else CAMINHO_TEMPLATE
@@ -655,10 +658,10 @@ def extrair_memorial_calculo(dados_json: dict, ambiente_obj=None, template_path:
     
     ws_lev = wb['Levantamento Campo']
     ws_serv = wb['Serviços Preliminares']
+    ws_solo = wb['Movimento de Solo'] 
 
     for nome_aba in wb.sheetnames:
-        if nome_aba == 'Levantamento Campo':
-            continue
+        if nome_aba == 'Levantamento Campo': continue
         aba = wb[nome_aba]
         for row in aba.iter_rows():
             for cell in row:
@@ -666,19 +669,16 @@ def extrair_memorial_calculo(dados_json: dict, ambiente_obj=None, template_path:
                     cell.value = None
 
     for i, amb in enumerate(ambientes[:MAX_AMBIENTES]):
-        r_amb = LINHA_INI_AMBIENTES  + i
-        r_ele = LINHA_INI_ELETRICA   + i
-        r_hid = LINHA_INI_HIDRAULICA + i
-        r_red = LINHA_INI_REDE       + i
-        r_inc = LINHA_INI_INCENDIO   + i
-        r_cob = LINHA_INI_COBERTURA  + i
-        r_est = LINHA_INI_ESTRUTURAS + i
+        r_amb, r_ele, r_hid, r_red, r_inc, r_cob, r_est = (
+            LINHA_INI_AMBIENTES + i, LINHA_INI_ELETRICA + i, LINHA_INI_HIDRAULICA + i,
+            LINHA_INI_REDE + i, LINHA_INI_INCENDIO + i, LINHA_INI_COBERTURA + i, LINHA_INI_ESTRUTURAS + i
+        )
 
         _preencher_amb_base(ws_lev, r_amb, amb)
 
         nome_amb = (amb.get('nome') or '').upper().strip()
         dxf_data = dxf_por_amb.get(nome_amb, {})
-        dxf_est = dxf_data.get('estrutura', {})
+        dxf_est = dxf_data.get('estrutura', {}) 
         dxf_ele = dxf_data.get('eletrica', {})
 
         if is_form:
@@ -694,7 +694,6 @@ def extrair_memorial_calculo(dados_json: dict, ambiente_obj=None, template_path:
             escrever(ws_lev, r_inc, 2, amb.get('nome'))
 
         tem_pilares = dxf_est.get('pilares_c') or dxf_est.get('pilares_l')
-
         if tem_pilares:
             escrever(ws_lev, r_est, 2, amb.get('nome'))
             escrever(ws_lev, r_est, COL_EST_PILAR_C, dxf_est.get('pilares_c'))
@@ -712,48 +711,49 @@ def extrair_memorial_calculo(dados_json: dict, ambiente_obj=None, template_path:
             escrever(ws_lev, r_ele, COL_ELE_DUTOS, dxf_ele.get('dutos_m') or None)
             escrever(ws_lev, r_ele, COL_ELE_CABOS, dxf_ele.get('cabos_m') or None)
 
+        area_s, inc_s, prof_s = float(amb.get('area') or 0.0), float(amb.get('inclinacaoTerreno') or 0.0), float(amb.get('profundidadeEscavacao') or 0.0)
+        vols = amb.get('volumes') or {}
+        v_terra, v_ater, v_enro, v_cont, v_talu, v_niv, v_comp = float(vols.get('terraplanagem') or 0.0), float(vols.get('aterro') or 0.0), float(vols.get('enrocamento') or 0.0), float(vols.get('contencao') or 0.0), float(vols.get('taludamento') or 0.0), float(vols.get('nivelamento') or 0.0), float(vols.get('compactacao') or 0.0)
+        v_esc = float(vols.get('escavacao') or 0.0) or round(area_s * prof_s, 2)
+
+        l_solo_terra = SOLO_LINHA_TERRAPLANAGEM + i
+        if v_terra > 0 or v_esc > 0 or prof_s > 0:
+            escrever(ws_solo, l_solo_terra, TERRA_COL_AMB, amb.get('nome'))
+            escrever(ws_solo, l_solo_terra, TERRA_COL_TIPO, 'Corte')
+            escrever(ws_solo, l_solo_terra, TERRA_COL_H, prof_s if prof_s > 0 else None)
+            escrever(ws_solo, l_solo_terra, TERRA_COL_V, v_esc if v_esc > 0 else v_terra)
+        else: escrever(ws_solo, l_solo_terra, TERRA_COL_AMB, None)
+
+        _escrever_linha_padrao_solo(ws_solo, SOLO_LINHA_ATERRO + i, amb.get('nome') if v_ater > 0 else None, inc_s, v_ater)
+        _escrever_linha_padrao_solo(ws_solo, SOLO_LINHA_ENROCAMENTO + i, amb.get('nome') if v_enro > 0 else None, None, v_enro)
+        _escrever_linha_padrao_solo(ws_solo, SOLO_LINHA_CONTENCAO + i, amb.get('nome') if v_cont > 0 else None, None, v_cont)
+        _escrever_linha_padrao_solo(ws_solo, SOLO_LINHA_TALUDAMENTO + i, amb.get('nome') if v_talu > 0 else None, None, v_talu)
+        v_total_n = round(v_niv + v_comp, 3)
+        _escrever_linha_padrao_solo(ws_solo, SOLO_LINHA_NIVELAMENTO + i, amb.get('nome') if v_total_n > 0 else None, None, v_total_n)
+
     ts = datetime.now().strftime("%d/%m/%Y %H:%M")
-    fonte = "FORM" if is_form else "CAD"
-    log_line = (
-        f"[AUTO] {ts} | {len(ambientes)} amb | Fonte: {fonte} | "
-        f"Fiação={eletrica}m | "
-        f"Incêndio={incendio}m | AF={hidro_af}m"
-    )
+    log_line = f"[AUTO] {ts} | {len(ambientes)} amb | Fiação={eletrica}m | Incêndio={incendio}m"
     escrever(ws_lev, LINHA_LOG, 2, log_line)
 
-    linha_inicio_remocoes = None
-    linha_inicio_demolicoes = None
+    l_ini_rem, l_ini_dem = None, None
+    for r in range(1, 200):
+        val_l = str(ws_serv.cell(row=r, column=2).value or "").lower()
+        if "remoções" in val_l: l_ini_rem = r + 5
+        elif "demolições" in val_l: l_ini_dem = r + 6
 
-    for r in range(1, max(ws_serv.max_row + 1, 200)):
-        val_a = str(ws_serv.cell(row=r, column=1).value or "").strip().lower()
-        val_b = str(ws_serv.cell(row=r, column=2).value or "").strip().lower()
-        texto_linha = val_a + " " + val_b
-        
-        if "remoções" in texto_linha and "1.7" in texto_linha:
-            linha_inicio_remocoes = r + 5
-        elif "demolições" in texto_linha and "1.8" in texto_linha:
-            linha_inicio_demolicoes = r + 6
-
-    if linha_inicio_remocoes:
+    if l_ini_rem:
         for i, (nome, valor) in enumerate(itens_remocao[:MAX_ITENS]):
-            linha = linha_inicio_remocoes + i
-            ws_serv.cell(row=linha, column=2).value = nome 
-            
+            linha = l_ini_rem + i
+            escrever(ws_serv, linha, 2, nome)
             col_id = get_coluna_remocao(nome)
-            if col_id == "GENERICO":
-                escrever(ws_serv, linha, 29, nome) 
-                escrever(ws_serv, linha, 31, valor)  
-            else:
-                escrever(ws_serv, linha, col_id, valor)
+            escrever(ws_serv, linha, 29 if col_id == "GENERICO" else col_id, valor)
 
-    if linha_inicio_demolicoes:
+    if l_ini_dem:
         for i, (nome, valor) in enumerate(itens_demolicao[:MAX_ITENS]):
-            linha = linha_inicio_demolicoes + i
-            ws_serv.cell(row=linha, column=2).value = nome 
-            
+            linha = l_ini_dem + i
+            escrever(ws_serv, linha, 2, nome)
             col_id = get_coluna_demolicao(nome)
-            if col_id is not None:
-                escrever(ws_serv, linha, col_id, valor)
+            if col_id: escrever(ws_serv, linha, col_id, valor)
 
     output = io.BytesIO()
     wb.save(output)
