@@ -204,19 +204,3 @@ class buscarArquivo(APIView): # GET Arquivo
                 {"erro": "Arquivo não encontrado"},
                 status=404
             )
-        
-class deletarArquivo(APIView):
-    permission_classes = [AllowAny]
-
-    def delete(self, request, id):
-        try:
-            arquivo = Arquivo.objects.get(id_arquivo=id)
-            arquivo.caminho_arquivo.delete(save=False)
-            arquivo.delete()
-
-            return Response({
-                "mensagem": "Arquivo deletado com sucesso"
-            })
-
-        except Arquivo.DoesNotExist:
-            return Response({"erro": "Arquivo não encontrado"}, status=404)

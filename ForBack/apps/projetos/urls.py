@@ -12,5 +12,4 @@ urlpatterns = [
     path('deletarProjeto/<uuid:id_projeto>', ProjetoDelete.as_view(), name='deletarProjeto'),
     path('atualizarProjeto/<uuid:id_projeto>', ProjetoUpdate.as_view(), name='atualizarProjeto'),
     path('verificarArquivo/<uuid:id_projeto>', verificarArquivo.as_view(), name='verificar_arquivo'),
-    path('deletar-arquivo/<int:id>', deletarArquivo.as_view()),
 ]

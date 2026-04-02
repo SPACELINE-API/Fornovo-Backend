@@ -1,18 +1,124 @@
 import json
 import re
+import math
+from pathlib import Path
 
-def auditar_limpeza_interdicoes(caminho_json: str):
-    print(f"A ler o ficheiro: {caminho_json}...")
-    print("A analisar dados sobre Limpeza e Interdições. Aguarde...\n")
+def _limpar_texto(raw):
+    if not raw:
+        return ""
+    t = re.sub(r'\{[^{}]*\}', '', raw)
+    t = re.sub(r'\\[a-zA-Z0-9]+\d*\.?.?x?;', ' ', t)
+    t = t.replace('\\P', ' ').replace('\\p', ' ').replace('\n', ' ')
+    t = re.sub(r'\s+', ' ', t)
+    return t.strip().strip('\\{}()[]').strip()
+
+def _comp_entidade(e):
+    d = e.get('dados', {})
+    tipo = e.get('tipo', '')
+    if tipo == 'LINE':
+        return d.get('comprimento', 0.0)
+    if tipo in ('LWPOLYLINE', 'POLYLINE'):
+        pts = d.get('pontos', [])
+        total = 0.0
+        for i in range(len(pts) - 1):
+            total += math.sqrt((pts[i+1][0] - pts[i][0])**2 + (pts[i+1][1] - pts[i][1])**2)
+        return round(total, 2)
+    return 0.0
+
+def _pos_entidade(e):
+    d = e.get('dados', {})
+    tipo = e.get('tipo', '')
+    if tipo == 'LINE':
+        return d.get('inicio', [0, 0, 0])
+    if tipo in ('LWPOLYLINE', 'POLYLINE'):
+        pts = d.get('pontos', [])
+        if pts:
+            return pts[0]
+    if tipo in ('CIRCLE', 'ARC', 'INSERT'):
+        return d.get('centro') or d.get('insercao') or [0, 0, 0]
+    if tipo in ('MTEXT', 'TEXT'):
+        return d.get('posicao') or [0, 0, 0]
+    return [0, 0, 0]
+
+def extrair_tudo_sobre_solo(entidades, textos, blocos):
+    keywords_solo = [
+        'TERRAPL', 'CORTE', 'ATERRO', 'ESCAVA', 'ENROCAMENTO', 
+        'CONTEN', 'ARRIMO', 'TALUD', 'NIVELAMENTO', 'COMPACTA', 
+        'SOLO', 'TERRENO', 'GLEBA', 'LOTE', 'VOLUME', 'COTA'
+    ]
+
+    resultados = {
+        'textos': [],
+        'geometria': [],
+        'blocos': []
+    }
+
+    # 1. VARREDURA DE TEXTOS
+    for t in textos:
+        conteudo_raw = t.get('conteudo', '')
+        conteudo_limpo = _limpar_texto(conteudo_raw).upper()
+        
+        if any(kw in conteudo_limpo for kw in keywords_solo):
+            valores_extraidos = re.findall(r'(\d+[.,]?\d*)\s*(m³|m3|m²|m2|m|%)', conteudo_limpo, re.IGNORECASE)
+            
+            resultados['textos'].append({
+                'texto_original': conteudo_raw.replace('\n', ' ').replace('\r', ''),
+                'texto_limpo': conteudo_limpo,
+                'layer': t.get('layer', 'DESCONHECIDO'),
+                'valores': valores_extraidos,
+                'posicao': _pos_entidade(t)
+            })
+
+    # 2. VARREDURA DE GEOMETRIAS
+    for e in entidades:
+        layer = e.get('layer', '').upper()
+        if any(kw in layer for kw in keywords_solo):
+            comp = _comp_entidade(e)
+            if comp > 0:
+                resultados['geometria'].append({
+                    'tipo': e.get('tipo', 'DESCONHECIDO'),
+                    'layer': e.get('layer', ''),
+                    'medida_linear': comp,
+                    'posicao': _pos_entidade(e)
+                })
+
+    # 3. VARREDURA DE BLOCOS
+    for b in blocos:
+        layer = b.get('layer', '').upper()
+        attrs = b.get('atributos', {})
+        relevante = any(kw in layer for kw in keywords_solo)
+        
+        for k, v in attrs.items():
+            k_upper, v_upper = str(k).upper(), str(v).upper()
+            if any(kw in k_upper for kw in keywords_solo) or any(kw in v_upper for kw in keywords_solo):
+                relevante = True
+                break
+        
+        if relevante:
+            resultados['blocos'].append({
+                'nome_bloco': b.get('nome', 'N/A'),
+                'layer': b.get('layer', ''),
+                'atributos': attrs,
+                'posicao': _pos_entidade(b)
+            })
+
+    return resultados
+
+def auditar_movimentos_solo(caminho_json: str):
+    caminho_obj = Path(caminho_json)
+    # Cria o ficheiro TXT na mesma pasta do JSON, com o prefixo 'relatorio_solo_'
+    caminho_txt = caminho_obj.with_name(f"relatorio_solo_{caminho_obj.stem}.txt")
+
+    linhas_relatorio = []
+    linhas_relatorio.append(f"A ler o ficheiro: {caminho_json}...")
     
     try:
         with open(caminho_json, 'r', encoding='utf-8') as f:
             dados = json.load(f)
     except FileNotFoundError:
-        print(f"❌ Erro: Ficheiro '{caminho_json}' não encontrado.")
+        print(f"Erro: O ficheiro '{caminho_json}' não foi encontrado.")
         return
 
-    # Desempacota o JSON caso esteja encapsulado
     if 'entidades' not in dados:
         for val in dados.values():
             if isinstance(val, dict) and 'entidades' in val:
@@ -23,114 +129,58 @@ def auditar_limpeza_interdicoes(caminho_json: str):
                     if 'entidades' in parsed: dados = parsed; break
                 except: pass
 
-    textos = dados.get('textos', []) or [e for e in dados.get('entidades', []) if e.get('tipo') in ('MTEXT', 'TEXT')]
-    blocos = dados.get('blocos', []) + [e for e in dados.get('entidades', []) if e.get('tipo') in ('INSERT', 'BLOCK')]
-    layers_projeto = dados.get('layers', [])
-    
-    # Palavras-chave abrangentes (sem acentos para facilitar a busca)
-    kw_limpeza = ['LIMPEZ', 'LIMPAR', 'ROCAD', 'ROÇAD', 'CAPIN']
-    kw_interdicao = ['INTERDIC', 'INTERDIÇ', 'ISOLAMENT', 'TAPUME', 'BLOQUEI', 'ADJACENCI', 'ADJACÊNCI']
-    
-    print("=" * 80)
-    print(" 🧹 RELATÓRIO: LIMPEZA E INTERDIÇÕES DE OBRA 🚧 ")
-    print("=" * 80)
-    
-    # ---------------------------------------------------------
-    # 1. Busca em Layers
-    # ---------------------------------------------------------
-    layers_encontradas = []
-    for l in layers_projeto:
-        l_upper = l.upper()
-        if any(k in l_upper for k in kw_limpeza + kw_interdicao):
-            layers_encontradas.append(l)
-    
-    print("\n--- 1. LAYERS ENCONTRADAS ---")
-    if layers_encontradas:
-        for l in layers_encontradas:
-            print(f"  • {l}")
-    else:
-        print("  ❌ Nenhuma layer nomeada com termos de limpeza ou interdição.")
+    entidades = dados.get('entidades', [])
+    textos = dados.get('textos', []) or [e for e in entidades if e.get('tipo') in ('MTEXT', 'TEXT')]
+    blocos = dados.get('blocos', [])
 
-    # ---------------------------------------------------------
-    # 2. Busca em Textos e Anotações
-    # ---------------------------------------------------------
-    print("\n--- 2. TEXTOS ENCONTRADOS ---")
-    textos_encontrados = False
-    
-    for t in textos:
-        c_raw = t.get('conteudo', '')
-        # Normaliza o texto para a busca
-        c_upper = c_raw.upper().replace('Ç', 'C').replace('Ã', 'A').replace('ÇÕES', 'COES')
-        
-        tem_limpeza = any(k in c_upper for k in kw_limpeza)
-        tem_interdicao = any(k in c_upper for k in kw_interdicao)
-        
-        if tem_limpeza or tem_interdicao:
-            textos_encontrados = True
-            
-            # Limpa as tags de formatação do AutoCAD
-            c_limpo = re.sub(r'\{[^{}]*\}', '', c_raw).strip()
-            c_limpo = re.sub(r'\\[a-zA-Z0-9]+\d*\.?.?x?;', ' ', c_limpo).strip()
-            c_limpo = re.sub(r'\s+', ' ', c_limpo).strip()
-            
-            categoria = "LIMPEZA" if tem_limpeza else "INTERDIÇÃO"
-            if tem_limpeza and tem_interdicao: 
-                categoria = "LIMPEZA E INTERDIÇÃO"
-            
-            print(f"🔹 [{categoria}] Texto: '{c_limpo}'")
-            print(f"   Layer: {t.get('layer', '')} | Posição: {t.get('posicao', [0,0])}")
-            print("-" * 50)
-            
-    if not textos_encontrados:
-        print("  ❌ Nenhum texto ou anotação relacionado encontrado na planta.")
+    linhas_relatorio.append("A extrair todos os dados de Movimento de Solo...\n")
+    extraido = extrair_tudo_sobre_solo(entidades, textos, blocos)
 
-    # ---------------------------------------------------------
-    # 3. Busca em Blocos / Atributos Ocultos
-    # ---------------------------------------------------------
-    print("\n--- 3. BLOCOS E ATRIBUTOS (Metadados do CAD) ---")
-    blocos_encontrados = False
-    
-    for b in blocos:
-        nome_bloco = b.get('nome', '').upper()
-        atributos = b.get('atributos', {})
-        dados_b = b.get('dados', {})
-        
-        dic_para_busca = {**atributos, **dados_b}
-        
-        tem_alvo = False
-        categoria = ""
-        
-        # Verifica no nome do bloco
-        if any(k in nome_bloco for k in kw_limpeza): 
-            tem_alvo = True; categoria += "LIMPEZA "
-        if any(k in nome_bloco for k in kw_interdicao): 
-            tem_alvo = True; categoria += "INTERDIÇÃO "
-            
-        # Verifica dentro dos atributos do bloco
-        for k, v in dic_para_busca.items():
-            v_str = str(v).upper().replace('Ç', 'C').replace('Ã', 'A')
-            if any(kw in v_str for kw in kw_limpeza):
-                tem_alvo = True; categoria += "LIMPEZA "
-            if any(kw in v_str for kw in kw_interdicao):
-                tem_alvo = True; categoria += "INTERDIÇÃO "
-                
-        if tem_alvo:
-            blocos_encontrados = True
-            # Evita categorias duplicadas na string
-            cat_final = " E ".join(list(set(categoria.split()))) 
-            
-            print(f"🔸 [{cat_final}] Bloco: '{b.get('nome', '')}'")
-            print(f"   Posição: {b.get('posicao', b.get('insercao', 'N/A'))}")
-            print(f"   Atributos Ocultos: {dic_para_busca}")
-            print("-" * 50)
+    linhas_relatorio.append("=" * 80)
+    linhas_relatorio.append(" RELATÓRIO DE EXTRAÇÃO: MOVIMENTO DE SOLO")
+    linhas_relatorio.append("=" * 80)
 
-    if not blocos_encontrados:
-        print("  ❌ Nenhum bloco com esses atributos encontrado.")
+    # IMPRIMIR TEXTOS ENCONTRADOS
+    linhas_relatorio.append(f"\n[1] TEXTOS ENCONTRADOS ({len(extraido['textos'])} itens)")
+    if not extraido['textos']:
+        linhas_relatorio.append("    Nenhum texto sobre solo encontrado.")
+    for t in extraido['textos']:
+        linhas_relatorio.append(f"    - Layer: {t['layer']}")
+        linhas_relatorio.append(f"      Texto: '{t['texto_original']}'")
+        if t['valores']:
+            vals = " | ".join([f"{v[0]}{v[1]}" for v in t['valores']])
+            linhas_relatorio.append(f"      Valores/Medidas detectadas: -> {vals}")
+        linhas_relatorio.append("")
 
-    print("\n" + "=" * 80)
+    # IMPRIMIR GEOMETRIAS ENCONTRADAS
+    linhas_relatorio.append(f"[2] GEOMETRIA EM LAYERS DE SOLO ({len(extraido['geometria'])} itens)")
+    if not extraido['geometria']:
+        linhas_relatorio.append("    Nenhuma linha ou polilinha em layers de solo.")
+    for g in extraido['geometria']:
+        linhas_relatorio.append(f"    - Tipo: {g['tipo']} | Layer: {g['layer']} | Perímetro/Comprimento: {g['medida_linear']}m")
+
+    # IMPRIMIR BLOCOS ENCONTRADOS
+    linhas_relatorio.append(f"\n[3] BLOCOS COM DADOS DE SOLO ({len(extraido['blocos'])} itens)")
+    if not extraido['blocos']:
+        linhas_relatorio.append("    Nenhum bloco/tabela sobre solo encontrado.")
+    for b in extraido['blocos']:
+        linhas_relatorio.append(f"    - Bloco: {b['nome_bloco']} | Layer: {b['layer']}")
+        linhas_relatorio.append(f"      Atributos:")
+        for k, v in b['atributos'].items():
+            linhas_relatorio.append(f"        > {k}: {v}")
+        linhas_relatorio.append("")
+
+    linhas_relatorio.append("=" * 80)
+
+    # Gravar tudo no ficheiro .txt
+    with open(caminho_txt, 'w', encoding='utf-8') as f_out:
+        f_out.write("\n".join(linhas_relatorio))
+
+    # Avisa o utilizador no terminal que o processo terminou e onde está o ficheiro
+    print(f"Sucesso! O output era muito grande e foi guardado em:")
+    print(f"-> {caminho_txt}")
 
 if __name__ == "__main__":
-    # Caminho do seu JSON
-    JSON_ENTRADA = r"C:\Users\vinic\Downloads\teste.JSON" 
-    
-    auditar_limpeza_interdicoes(JSON_ENTRADA)
+    # Substitua pelo caminho correto do seu ficheiro JSON gerado pelo AutoCAD
+    JSON_ENTRADA = r"C:\Users\vinic\Downloads\teste.JSON"
+    auditar_movimentos_solo(JSON_ENTRADA)
