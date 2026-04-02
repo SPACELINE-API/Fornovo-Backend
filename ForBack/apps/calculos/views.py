@@ -339,4 +339,3 @@ class levantamentoCampo(APIView):
             return Response(results[0] if projeto_id else results)
         except Exception as e:
             return Response({"error": str(e)}, status=500)
-

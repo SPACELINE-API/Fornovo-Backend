@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.parsers import MultiPartParser
-from django.http import FileResponse, HttpResponse
+from django.http import FileResponse, HttpResponse, JsonResponse
 import json
 import threading
 import time
@@ -439,38 +439,6 @@ class GerarPlanilhaEletrica(APIView):
 
         except Exception as e:
             return Response({"erro": "Falha ao disponibilizar o arquivo para download.", "detalhe": str(e)}, status=500)
-
-# class GerarMemorialCalculo(APIView):
-#     permission_classes = [AllowAny]
-#     parser_classes = [MultiPartParser]
-
-#     def post(self, request):
-#         try:
-#             arquivo = request.FILES.get("arquivo")
-            
-#             if arquivo:
-#                 dados_json = json.loads(arquivo.read().decode("utf-8"))
-#             else:
-#                 dados_json = request.data
-                
-#             if not dados_json:
-#                 return Response({"erro": "Dados não fornecidos"}, status=400)
-
-#             arquivo_bytes = p2.gerar_memorial_completo(dados_json)
-
-#             response = HttpResponse(
-#                 arquivo_bytes,
-#                 content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-#             )
-
-#             response["Content-Disposition"] = 'attachment; filename="memorial.xlsx"'
-
-#             return response
-
-#         except Exception as e:
-#             import traceback
-#             print(traceback.format_exc())
-#             return Response({"erro": str(e)}, status=500)
 
 class GerarPlanilhaLevantamentoAPIView(APIView):
     parser_classes = [MultiPartParser]

@@ -13,7 +13,7 @@ from langchain_ollama import OllamaEmbeddings, OllamaLLM
 from apps.dados_ia.services.ollama_installer import ensure_ollama_cuda
 
 CHROMA_DIR = Path.home() / ".chroma_normas_db"
-MODELO_LLM = "llama3.1:8b"
+MODELO_LLM = "llama3.1:8b" 
 MODELO_EMBEDDING = "nomic-embed-text"
 
 _NUM_CPU = multiprocessing.cpu_count()
