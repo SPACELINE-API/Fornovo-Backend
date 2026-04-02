@@ -12,6 +12,8 @@ from django.http import FileResponse, HttpResponse
 import json
 import threading
 import time
+import hashlib
+from django.core.files.base import ContentFile
 
 from .models import DadosExtraidos, LogValidacao, DadosInseridosManualmente
 from apps.projetos.models import Projeto, Norma, Arquivo
@@ -698,3 +700,115 @@ class GerarPlanilhaMovimentoSolo(APIView):
         except Exception as e:
             print(traceback.format_exc())
             return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class SalvarMemorialCalculo(APIView):
+    """
+    Rota que gera o memorial de cálculo e o salva no banco de dados vinculado ao projeto.
+    """
+    parser_classes = [MultiPartParser]
+
+    def _parse_json_field(self, request, key):
+        arquivo = request.FILES.get(key)
+        if arquivo:
+            return json.loads(arquivo.read().decode("utf-8"))
+        valor = request.data.get(key)
+        if valor:
+            if isinstance(valor, str):
+                return json.loads(valor)
+            return valor
+        return None
+
+    def post(self, request, *args, **kwargs):
+        try:
+            # 1. Buscar o projeto_id do corpo da requisição (POST)
+            projeto_id = request.data.get("projeto_id")
+            if not projeto_id:
+                return Response({"erro": "O campo 'projeto_id' é obrigatório."}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                projeto = Projeto.objects.get(id_projeto=projeto_id)
+            except Projeto.DoesNotExist:
+                return Response({"erro": "Projeto não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+            # 2. Parsear os dados (DXF e Manual)
+            dados_arquivo = self._parse_json_field(request, "arquivo")
+            dados_dxf = self._parse_json_field(request, "dxf")
+
+            if not dados_arquivo:
+                return Response({"erro": "Envie o JSON manual no campo 'arquivo'."}, status=status.HTTP_400_BAD_REQUEST)
+            if not dados_dxf:
+                return Response({"erro": "Envie o JSON do DXF no campo 'dxf'."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # 3. Gerar o conteúdo do Excel
+            dados_mesclados = mesclar_form_com_dxf(dados_arquivo, dados_dxf)
+            arquivo_bytes = extrair_memorial_calculo(dados_mesclados)
+            
+            if not arquivo_bytes:
+                return Response({"erro": "Falha na geração do arquivo Excel."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            # 4. Salvar no banco de dados (Model Arquivo)
+            nome_arquivo = f"memorial_calculo_{projeto_id[:8]}.xlsx"
+            hash_arquivo = hashlib.sha256(arquivo_bytes).hexdigest()
+
+            # Verificar se já existe um arquivo com esse hash para este projeto (opcional)
+            # if Arquivo.objects.filter(projeto=projeto, hash_arquivo=hash_arquivo).exists():
+            #     return Response({"mensagem": "Este memorial já foi salvo anteriormente.", "status": "existente"}, status=200)
+
+            novo_arquivo = Arquivo.objects.create(
+                projeto=projeto,
+                nome_arquivo=nome_arquivo,
+                hash_arquivo=hash_arquivo,
+                tipo_arquivo='xlsx',
+                caminho_arquivo=ContentFile(arquivo_bytes, name=nome_arquivo)
+            )
+
+            return Response({
+                "mensagem": "Memorial de cálculo salvo com sucesso!",
+                "id_arquivo": novo_arquivo.id_arquivo,
+                "nome_arquivo": novo_arquivo.nome_arquivo
+            }, status=status.HTTP_201_CREATED)
+
+        except json.JSONDecodeError as e:
+            return Response({"erro": "JSON inválido.", "detalhe": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())
+            return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def get(self, request, *args, **kwargs):
+        """
+        Rota GET para recuperar o memorial de cálculo (XLSX) salvo para um projeto.
+        O projeto_id deve ser passado via query parameter: ?projeto_id=...
+        """
+        try:
+            # 1. Buscar o projeto_id dos query parameters
+            projeto_id = request.query_params.get("projeto_id")
+            if not projeto_id:
+                return Response({"erro": "O parâmetro 'projeto_id' é obrigatório na URL (query string)."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Buscar o arquivo do tipo xlsx para o projeto
+            arquivo = Arquivo.objects.filter(projeto_id=projeto_id, tipo_arquivo='xlsx').last()
+
+            if not arquivo:
+                return Response({
+                    "erro": "Nenhum memorial de cálculo salvo para este projeto."
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            if not arquivo.caminho_arquivo:
+                return Response({"erro": "Arquivo físico não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+            # 2. Retornar o arquivo para download
+            return FileResponse(
+                arquivo.caminho_arquivo.open("rb"),
+                as_attachment=True,
+                filename=arquivo.nome_arquivo,
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())
+            return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
