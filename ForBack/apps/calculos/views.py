@@ -584,3 +584,4 @@ class GerenciarLayersView(APIView):
 
     def get(self, request):
         return Response({"layers": sorted(_ler_dicionario())})
+

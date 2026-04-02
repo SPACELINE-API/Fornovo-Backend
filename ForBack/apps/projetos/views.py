@@ -138,6 +138,31 @@ class uploadArquivo(APIView): # POST Arquivo
         except Exception as e:
             return Response({"erro": str(e)}, status=400)        
 
+class verificarArquivo(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, id_projeto):
+        arquivo = Arquivo.objects.filter(
+            projeto_id=id_projeto
+        ).first()
+
+        if not arquivo:
+            return Response(
+                {"existe": False},
+                status=404
+            )
+
+        return Response(
+            {
+                "existe": True,
+                "id_arquivo": arquivo.id_arquivo,
+                "nome_arquivo": arquivo.nome_arquivo,
+                "tipo_arquivo": arquivo.tipo_arquivo,
+                "hash_arquivo": arquivo.hash_arquivo
+            },
+            status=200
+        )
+
 class buscarArquivo(APIView): # GET Arquivo
     def get(self, request, projeto_id):
         try:
@@ -179,3 +204,19 @@ class buscarArquivo(APIView): # GET Arquivo
                 {"erro": "Arquivo não encontrado"},
                 status=404
             )
+        
+class deletarArquivo(APIView):
+    permission_classes = [AllowAny]
+
+    def delete(self, request, id):
+        try:
+            arquivo = Arquivo.objects.get(id_arquivo=id)
+            arquivo.caminho_arquivo.delete(save=False)
+            arquivo.delete()
+
+            return Response({
+                "mensagem": "Arquivo deletado com sucesso"
+            })
+
+        except Arquivo.DoesNotExist:
+            return Response({"erro": "Arquivo não encontrado"}, status=404)
