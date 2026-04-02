@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import cadastrarProjeto, deletarArquivo, uploadArquivo, listarProjetos, buscarArquivo, buscarProjeto, ProjetoDelete, ProjetoUpdate, verificarArquivo
+from .views import cadastrarProjeto, uploadArquivo, listarProjetos, buscarArquivo, buscarProjeto, ProjetoDelete, ProjetoUpdate, verificarArquivo
 app_name = 'projetos'
 
 urlpatterns = [
