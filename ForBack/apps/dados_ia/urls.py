@@ -13,7 +13,8 @@ from .views import (
     ExtrairDadosDXFAPIView,
     DebugEletricaView,
     MemorialCalculo,
-    GerarPlanilhaMovimentoSolo 
+    GerarPlanilhaMovimentoSolo,
+    deletarArquivo
 )
 
 app_name = 'dados_ia'
@@ -32,5 +33,6 @@ urlpatterns = [
     path('extrair-dados-dxf', ExtrairDadosDXFAPIView.as_view(), name='extrair_dados_dxf'),
     path('debug-eletrica', DebugEletricaView.as_view(), name='debug_eletrica'),
     path('memorial-calculo', MemorialCalculo.as_view(), name='memorial-calculo'),
-    path('movimento-solo', GerarPlanilhaMovimentoSolo.as_view(), name='movimento-solo')
+    path('movimento-solo', GerarPlanilhaMovimentoSolo.as_view(), name='movimento-solo'),
+    path('deletar-arquivo/<int:id>', deletarArquivo.as_view()),
 ]

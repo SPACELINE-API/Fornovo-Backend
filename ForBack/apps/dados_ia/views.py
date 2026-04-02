@@ -35,6 +35,8 @@ from .services.memorial.serviços_preliminares import extrair_servicos_prelimina
 from .services.memorial.memorial_calculo import extrair_memorial_calculo
 from .services.memorial.movimento_solo import extrair_movimento_solo
 
+import sys
+
 _lock = threading.Lock()
 
 class CadastrarDadosExtraidos(APIView):
@@ -201,7 +203,6 @@ class ConverterArquivo(APIView):
                 f.unlink()
             output_dir.rmdir()
 
-
 class ProcessarProjetoIA(APIView):
     permission_classes = [AllowAny]
 
@@ -228,16 +229,17 @@ class ProcessarProjetoIA(APIView):
             return Response({"erro": "Nenhum arquivo CAD associado (RN.1)."}, status=404)
 
         try:
+            BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+            script_path = os.path.join(BASE_DIR, "services", "oda_installer.py")
+            
             start_time = time.time()
             arquivo_path = str(arquivo.caminho_arquivo.path)
             dxf_path = arquivo_path
 
             input_dir = None
             output_dir = None
-            # Integração com o Conversor de Arquivos caso seja DWG
             if arquivo_path.lower().endswith(".dwg"):
-                if not oda.is_oda_ready():
-                    return Response({"erro": "Conversor ODA não instalado."}, status=500)
+                subprocess.Popen([sys.executable, script_path])
                 
                 input_dir = Path(tempfile.mkdtemp())
                 output_dir = Path(tempfile.mkdtemp())
@@ -698,3 +700,20 @@ class GerarPlanilhaMovimentoSolo(APIView):
         except Exception as e:
             print(traceback.format_exc())
             return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+class deletarArquivo(APIView):
+    permission_classes = [AllowAny]
+
+    def delete(self, request, id):
+        try:
+            arquivo = Arquivo.objects.get(id_arquivo=id)
+            arquivo.caminho_arquivo.delete(save=False)
+            arquivo.delete()
+
+            return Response({
+                "mensagem": "Arquivo deletado com sucesso"
+            })
+
+        except Arquivo.DoesNotExist:
+            return Response({"erro": "Arquivo não encontrado"}, status=404)
