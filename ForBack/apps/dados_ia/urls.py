@@ -3,7 +3,9 @@ from .views import (
     CadastrarDadosExtraidos,
     CadastrarLogValidacao,
     CadastrarDadosManuais,
+    ConsultarDadosProcessadosIA,
     ConverterArquivo,
+    StatusMemCal,
     executarAgente,
     inserirNorma,
     GerarPlanilhaEletrica,
@@ -34,5 +36,7 @@ urlpatterns = [
     path('debug-eletrica', DebugEletricaView.as_view(), name='debug_eletrica'),
     path('memorial-calculo', MemorialCalculo.as_view(), name='memorial-calculo'),
     path('movimento-solo', GerarPlanilhaMovimentoSolo.as_view(), name='movimento-solo'),
-    path('salvar-memorial', SalvarMemorialCalculo.as_view(), name='salvar-memorial-calculo')
+    path('salvar-memorial', SalvarMemorialCalculo.as_view(), name='salvar-memorial-calculo'),
+    path('status-memorial/', StatusMemCal.as_view(), name='status-memorial-calculo'),
+    path('dados-processados/<uuid:projeto_id>', ConsultarDadosProcessadosIA.as_view(), name='consultar_dados_ia'),
 ]
