@@ -1,13 +1,16 @@
 import os
 import subprocess
 import tempfile
+import traceback
 import ctypes
+import pickle
 from pathlib import Path
 
+from aiohttp import request
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from rest_framework.parsers import MultiPartParser
+from rest_framework.parsers import MultiPartParser, JSONParser
 from django.http import FileResponse, HttpResponse, JsonResponse
 import json
 import threading
@@ -592,17 +595,30 @@ class GerarPlanilhaServicosPreliminaresAPIView(APIView):
             return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class MemorialCalculo(APIView):
-    parser_classes = [MultiPartParser]
+    parser_classes = [MultiPartParser, JSONParser]
 
     def _parse_json_field(self, request, key):
         arquivo = request.FILES.get(key)
         if arquivo:
-            return json.loads(arquivo.read().decode("utf-8"))
+            try:
+                return json.loads(arquivo.read().decode("utf-8"))
+            except Exception:
+                pass
+
         valor = request.data.get(key)
-        if valor:
+        if valor is not None:
+            if isinstance(valor, (dict, list)):
+                return valor
+            
             if isinstance(valor, str):
-                return json.loads(valor)
-            return valor
+                try:
+                    parsed = json.loads(valor)
+                    if isinstance(parsed, str):
+                        parsed = json.loads(parsed)
+                    return parsed
+                except json.JSONDecodeError:
+                    return valor
+                    
         return None
 
     def post(self, request, *args, **kwargs):
@@ -674,7 +690,7 @@ class SalvarMemorialCalculo(APIView):
     """
     Rota que gera o memorial de cálculo e o salva no banco de dados vinculado ao projeto.
     """
-    parser_classes = [MultiPartParser]
+    parser_classes = [MultiPartParser, JSONParser]
 
     def _parse_json_field(self, request, key):
         arquivo = request.FILES.get(key)
@@ -780,3 +796,101 @@ class SalvarMemorialCalculo(APIView):
             print(traceback.format_exc())
             return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class StatusMemCal(APIView):
+    def get(self, request): 
+        projeto_id = request.query_params.get("projeto_id")
+        
+        if not projeto_id:
+            return Response({"erro": "O parâmetro 'projeto_id' é obrigatório."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            arquivos = Arquivo.objects.filter(projeto_id=projeto_id, tipo_arquivo='xlsx')
+            
+            if arquivos.exists():
+                return Response({
+                    "status": "concluido", 
+                    "mensagem": "Memorial de cálculo já gerado e salvo."
+                })
+            else:
+                return Response({
+                    "status": "pendente", 
+                    "mensagem": "Memorial de cálculo ainda não gerado ou salvo."
+                })
+        except Exception as e:
+            return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class ConsultarDadosProcessadosIA(APIView):
+    permission_classes = [AllowAny]
+
+    def carregar_dados(self, raw_data):
+        if isinstance(raw_data, memoryview):
+            raw_data = bytes(raw_data)
+
+        try:
+            import zlib
+            raw_data = zlib.decompress(raw_data)
+        except Exception:
+            pass
+
+        try:
+            return pickle.loads(raw_data)
+        except Exception:
+            pass
+
+        try:
+            return json.loads(raw_data)
+        except Exception:
+            pass
+
+        try:
+            return json.loads(raw_data.decode("utf-8"))
+        except Exception:
+            pass
+
+        try:
+            primeiro = json.loads(raw_data.decode("utf-8"))
+            if isinstance(primeiro, str):
+                return json.loads(primeiro)
+        except Exception:
+            pass
+
+        raise ValueError("Formato de dados desconhecido")
+
+    def get(self, request, projeto_id):
+        try:
+            dados_obj = DadosExtraidos.objects.get(
+                arquivo__projeto_id=projeto_id
+            )
+
+            raw_data = dados_obj.dados_binarios
+            dados_final = self.carregar_dados(raw_data)
+
+            if not isinstance(dados_final, dict):
+                raise ValueError("Dados não são um objeto JSON válido")
+
+            return Response(
+                {
+                    "status": "concluido",
+                    "dados_dxf": dados_final,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except DadosExtraidos.DoesNotExist:
+            return Response(
+                {
+                    "status": "pendente",
+                    "mensagem": "A IA ainda não processou este projeto.",
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        except Exception as e:
+            print(traceback.format_exc())
+            return Response(
+                {
+                    "erro": "Falha ao carregar dados DXF",
+                    "detalhe": str(e),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

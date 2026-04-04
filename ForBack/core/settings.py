@@ -8,6 +8,9 @@ SECRET_KEY = 'django-insecure-fme_-sjor%0%d)gwv1)@lirv%=js3u=f9th5$#)!ecy8wiuld2
 
 DEBUG = True
 
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800 
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  
+
 ALLOWED_HOSTS = []
 
 
