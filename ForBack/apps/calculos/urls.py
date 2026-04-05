@@ -1,10 +1,9 @@
 from django.urls import path
 from . import views
 app_name = 'calculos'
+from .views import levantamentoCampo
 
 urlpatterns = [
-    path('', views.index, name='index'), 
-    
-    # Exemplo: dominio.com/projetos/cadastrar/
-    # path('cadastrar/', views.cadastrar_projeto, name='cadastrar'),
+    path('form-levantamento', levantamentoCampo.as_view()),
+    path('form-levantamento/<uuid:projeto_id>', levantamentoCampo.as_view()),
 ]

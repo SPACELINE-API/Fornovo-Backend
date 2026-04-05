@@ -1,27 +1,18 @@
-"""
-URL configuration for ForBack project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
 from django.urls import include, path
+from django.conf import settings # Importa o settings.py
+from django.conf.urls.static import static # Serve para o uso do /media durante o desenvolvimento
 
 urlpatterns = [
-    path('admin', admin.site.urls),
-    # Rota para a aplicação de cálculos:
-    path('calculos', include('apps.calculos.urls')),
-    
-    # Repita para as outras apps quando for adicionar aqui:
-    # path('usuarios/', include('apps.usuarios.urls')),
+    path('admin/', admin.site.urls),
+    # Rota para a aplicação de cálculos, projetos e usuarios:
+    path('api/calculos/', include('apps.calculos.urls')),
+    path('api/projetos/', include('apps.projetos.urls')),
+    path('api/usuarios/', include('apps.usuarios.urls')),
+    path('api/dados-ia/', include('apps.dados_ia.urls')),
+    path('api/normas/', include('apps.normas.urls')),
 ]
+
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) # Configura pasta pra testar os arquivos de media em desenvolvimento

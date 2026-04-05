@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class UsuariosConfig(AppConfig):
+class DadosIaConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'apps.usuarios'
+    name = 'apps.dados_ia'

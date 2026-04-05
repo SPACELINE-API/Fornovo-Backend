@@ -1,0 +1,269 @@
+import django.db.models.deletion
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    initial = True
+
+    dependencies = [
+        ('projetos', '0001_initial'),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='Ambiente',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('nome', models.CharField(max_length=255)),
+                ('comprimento', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('largura', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('altura', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('area', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('projeto', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='ambientes', to='projetos.projeto')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Cabeamento',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('circuito', models.CharField(max_length=255)),
+                ('comprimento_m', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('tomadas', models.IntegerField()),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Cabo',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('circuito', models.CharField(max_length=255)),
+                ('secao_mm2', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Canteiro',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('conteineres', models.IntegerField()),
+                ('banheiros', models.IntegerField()),
+                ('andaimes', models.IntegerField()),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Cobertura',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('estrutura', models.CharField(max_length=255)),
+                ('telhamento', models.CharField(max_length=255)),
+                ('espessura_cm', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('inclinacao_percent', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Disjuntor',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('amperagem', models.IntegerField()),
+                ('quantidade', models.IntegerField()),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Duto',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('diametro', models.CharField(max_length=50)),
+                ('comprimento_m', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Escavacao',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('profundidade_m', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('inclinacao_percent', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='EstruturaMadeira',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('peca', models.CharField(max_length=255)),
+                ('secao', models.CharField(max_length=255)),
+                ('peso_kgf', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('telhamento', models.CharField(max_length=255)),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='EstruturaMetalica',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('tipo', models.CharField(max_length=255)),
+                ('perfil', models.CharField(max_length=255)),
+                ('secao', models.CharField(max_length=255)),
+                ('peso_kgf', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('elastomero', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Extintor',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('tipo', models.CharField(max_length=255)),
+                ('peso_kg', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('capacidade_l', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Fundacao',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('tipo', models.CharField(max_length=255)),
+                ('profundidade_m', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('volume_lastro_m3', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('volume_concreto_m3', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('ferragem_kgf', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('estribo_kgf', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('forma_m2', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Hidrante',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('localizacao', models.CharField(max_length=255)),
+                ('diametro', models.CharField(max_length=50)),
+                ('conexoes', models.IntegerField()),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Hidraulica',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('registros', models.IntegerField()),
+                ('valvulas', models.IntegerField()),
+                ('conexoes', models.IntegerField()),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Peca',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('descricao', models.CharField(max_length=255)),
+                ('secao', models.CharField(max_length=255)),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='PontoEletrico',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('tomadas', models.IntegerField()),
+                ('pontos_iluminacao', models.IntegerField()),
+                ('interruptores', models.IntegerField()),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Ramal',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('nome', models.CharField(max_length=255)),
+                ('diametro', models.CharField(max_length=50)),
+                ('comprimento_m', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Reservatorio',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('tipo', models.CharField(max_length=255)),
+                ('capacidade_l', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Residuo',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('comum_m3', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('contaminado_m3', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('destinacao', models.CharField(max_length=255)),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='SPDA',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('hastes', models.IntegerField()),
+                ('caixas_inspecao', models.IntegerField()),
+                ('terminais_aereos', models.IntegerField()),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='SuperEstrutura',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('tipo', models.CharField(max_length=255)),
+                ('largura_m', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('altura_m', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('volume_concreto_m3', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('ferragem_kgf', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('estribo_kgf', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('forma_m2', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Telecom',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('quadros_rede', models.IntegerField()),
+                ('patch_cords', models.IntegerField()),
+                ('cameras', models.IntegerField()),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='TipoEletrico',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('tipo_tomada', models.CharField(max_length=255)),
+                ('tipo_interruptor', models.CharField(max_length=255)),
+                ('tipo_luminaria', models.CharField(max_length=255)),
+                ('altura_instalacao', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Volume',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('terraplanagem_m3', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('escavacao_m3', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('aterro_m3', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('enrocamento_m3', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('contencao_m3', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('taludamento_m3', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('nivelamento_m3', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('compactacao_m3', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('ambiente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='calculos.ambiente')),
+            ],
+        ),
+    ]
