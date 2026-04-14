@@ -14,7 +14,7 @@ padraoStatus = [
 transicaoStatus = {
     "Pendente": ["Em andamento"],
     "Em andamento": ["Em revisão"],
-    "Em Revisão": ["Em andamento", "Concluído"],
+    "Em revisão": ["Em andamento", "Concluído"],
     "Concluído": []
 }
 
@@ -58,11 +58,14 @@ class Projeto(models.Model):
 
     
     def clean(self): 
-        if self.data_inicio and self.data_fim: # validação de datas
+        # validação de datas
+        if self.data_inicio and self.data_fim:
             if self.data_fim < self.data_inicio:
                 raise ValidationError("A data de fim não pode ser menor que a data de início.")
 
-        if self.pk:  # validação de transição de status
+        # só valida transição se o projeto já existir no banco
+        if Projeto.objects.filter(pk=self.pk).exists():
+
             projeto_antigo = Projeto.objects.get(pk=self.pk)
 
             status_atual = projeto_antigo.status
