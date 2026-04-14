@@ -11,6 +11,13 @@ padraoStatus = [
     ('Concluído', 'Concluído'),
 ]
 
+transicaoStatus = {
+    "Pendente": ["Em andamento"],
+    "Em andamento": ["Em revisão"],
+    "Em Revisão": ["Em andamento", "Concluído"],
+    "Concluído": []
+}
+
 class Projeto(models.Model):
     id_projeto = models.UUIDField(
         primary_key=True,
@@ -54,6 +61,17 @@ class Projeto(models.Model):
         if self.data_inicio and self.data_fim: # validação de datas
             if self.data_fim < self.data_inicio:
                 raise ValidationError("A data de fim não pode ser menor que a data de início.")
+
+        if self.pk:  # validação de transição de status
+            projeto_antigo = Projeto.objects.get(pk=self.pk)
+
+            status_atual = projeto_antigo.status
+            novo_status = self.status
+
+            if novo_status not in transicaoStatus.get(status_atual, []):
+                raise ValidationError(
+                    f"Não é permitido mudar de '{status_atual}' para '{novo_status}'."
+                )
     
     # Essa função serve para valdiar a função clean
     def save(self, *args, **kwargs):
