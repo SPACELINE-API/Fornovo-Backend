@@ -2,7 +2,8 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from .models import Projeto, Arquivo
+from .models import Projeto, Arquivo, padraoStatus
+from django.core.exceptions import ValidationError
 from apps.usuarios.models import Usuario
 from .serializers import ProjetoSerializer
 from django.http import FileResponse
@@ -64,6 +65,41 @@ class ProjetoDelete(APIView):
             return Response(
                 {"erro": "Projeto não encontrado"},
                 status=404
+            )
+
+class AtualizarStatusProjeto(APIView):
+    permission_classes = [AllowAny]
+
+    def patch(self, request, id_projeto):
+        try:
+            projeto = Projeto.objects.get(id_projeto=id_projeto)
+
+            novo_status = request.data.get("status")
+
+            if novo_status not in dict(padraoStatus):
+                return Response(
+                    {"erro": "Status inválido"},
+                    status=400
+                )
+
+            projeto.status = novo_status
+            projeto.save()
+
+            return Response({
+                "mensagem": "Status atualizado com sucesso",
+                "dados": ProjetoSerializer(projeto).data
+            }, status=200)
+
+        except Projeto.DoesNotExist:
+            return Response(
+                {"erro": "Projeto não encontrado"},
+                status=404
+            )
+
+        except ValidationError as e:
+            return Response(
+                {"erro": str(e)},
+                status=400
             )
         
 class ProjetoUpdate(APIView):
