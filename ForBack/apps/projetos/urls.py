@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import VerificarStatusIA, cadastrarProjeto, deletarArquivo, uploadArquivo, listarProjetos, buscarArquivo, buscarProjeto, ProjetoDelete, ProjetoUpdate, verificarArquivo
+from .views import VerificarStatusIA, cadastrarProjeto, deletarArquivo, uploadArquivo, listarProjetos, buscarArquivo, buscarProjeto, ProjetoDelete, ProjetoUpdate, verificarArquivo, AtualizarStatusProjeto
 app_name = 'projetos'
 
 urlpatterns = [
@@ -14,4 +14,5 @@ urlpatterns = [
     path('verificarArquivo/<uuid:id_projeto>', verificarArquivo.as_view(), name='verificar_arquivo'),
     path('deletarArquivo/<int:id>', deletarArquivo.as_view(), name='deletarArquivo'),
     path('statusIa/<uuid:id_projeto>', VerificarStatusIA.as_view(), name='statusIA'),
+    path('atualizarStatus/<uuid:id_projeto>', AtualizarStatusProjeto.as_view(), name='atualizarStatusProjeto'),
 ]

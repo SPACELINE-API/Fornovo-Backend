@@ -7,7 +7,7 @@ import uuid
 padraoStatus = [
     ('Pendente', 'Pendente'),
     ('Em andamento', 'Em andamento'),
-    ('Em Revisão', 'Em Revisão'),
+    ('Em revisão', 'Em revisão'),
     ('Concluído', 'Concluído'),
 ]
 
@@ -49,9 +49,9 @@ class Projeto(models.Model):
     def __str__(self):
         return self.nome_projeto
 
-    # Essa função serve para verificar se a data de inicio é menor que a data do fim
-    def clean(self):
-        if self.data_inicio and self.data_fim:
+    
+    def clean(self): 
+        if self.data_inicio and self.data_fim: # validação de datas
             if self.data_fim < self.data_inicio:
                 raise ValidationError("A data de fim não pode ser menor que a data de início.")
     
