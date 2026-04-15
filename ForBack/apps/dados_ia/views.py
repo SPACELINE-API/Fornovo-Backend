@@ -368,7 +368,31 @@ class inserirNorma(APIView):
     parser_classes = [MultiPartParser]
 
     def post(self, request):
-        arquivos = request.FILES.getlist("norma")
+        def decodificar_se_bytes(valor):
+            if isinstance(valor, bytes):
+                return valor.decode('utf-8')
+            if isinstance(valor, list) and len(valor) > 0:
+                item = valor[0]
+                return item.decode('utf-8') if isinstance(item, bytes) else item
+            return valor
+
+        codigo = decodificar_se_bytes(request.data.get("codigo"))
+        nome = decodificar_se_bytes(request.data.get("nome"))
+        ano = decodificar_se_bytes(request.data.get("ano"))
+        serie = decodificar_se_bytes(request.data.get("serie"))
+        descricao = decodificar_se_bytes(request.data.get("descricao"))
+
+        meta_data = {
+            "codigo": codigo,
+            "nome": nome,
+            "ano": ano,
+            "serie": serie,
+            "descricao": descricao
+        }
+
+        print("Metadados decodificados:", meta_data)
+
+        arquivos = request.FILES.get("arquivo_pdf")
 
         if not arquivos:
             return Response({"erro": "Nenhum arquivo enviado."}, status=400)
@@ -376,7 +400,7 @@ class inserirNorma(APIView):
         resultados = []
 
         for arquivo in arquivos:
-            if not arquivo.name.lower().endswith(".pdf"):
+            if getattr(arquivo, 'name', None) and not arquivo.name.lower().endswith(".pdf"):
                 resultados.append({
                     "arquivo": arquivo.name,
                     "erro": "Formato inválido"
@@ -392,7 +416,7 @@ class inserirNorma(APIView):
                         f.write(chunk)
 
                 with _lock:
-                    resultado = inserir_norma(str(tmp_path))
+                    resultado = inserir_norma(str(tmp_path), metadados=meta_data)
 
                 resultados.append({
                     "arquivo": arquivo.name,

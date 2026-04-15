@@ -37,7 +37,7 @@ def get_db():
         )
 
 
-def inserir_norma(pdf_path: str) -> dict:
+def inserir_norma(pdf_path: str, metadados: dict) -> dict:
     loader = PyPDFLoader(pdf_path)
     pages = loader.load()
 
@@ -58,12 +58,33 @@ def inserir_norma(pdf_path: str) -> dict:
 
     db = get_db()
 
-    LOTE = 200
+    LOTE = 200     
     total_lotes = -(-len(chunks) // LOTE)
+
+    nome_arquivo = Path(pdf_path).name
+
+    print(nome_arquivo)
+    print('Inserindo norma no chroma')
+
+    metadados_base = {
+        "fonte": nome_arquivo,
+        "nome": metadados.get("nome", "") if metadados else "",
+        "codigo": metadados.get("codigo", "") if metadados else "",
+        "serie": metadados.get("serie", "") if metadados else "",
+        "ano": metadados.get("ano", "") if metadados else "",
+        "descricao": metadados.get("descricao", "") if metadados else ""
+    }
+    
+    # Se o dict de metadados trouxer campos extra (como id_norma), eles são adicionados aqui
+    if metadados:
+        for k, v in metadados.items():
+            if k not in metadados_base:
+                metadados_base[k] = v
 
     for i in range(0, len(chunks), LOTE):
         lote = chunks[i:i + LOTE]
-        db.add_texts(lote)
+        lista_metadados = [metadados_base for _ in lote]
+        db.add_texts(lote, metadatas=lista_metadados)
 
     return {
         "ok": True,
@@ -71,7 +92,8 @@ def inserir_norma(pdf_path: str) -> dict:
         "lotes": total_lotes
     }
 
-
-def total_chunks() -> int:
+def apagar_norma(id_norma: int) -> bool:
     db = get_db()
-    return db._collection.count()
+    db.delete(where={"id_norma": id_norma})
+    return True
+
