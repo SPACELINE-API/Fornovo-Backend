@@ -368,6 +368,7 @@ class inserirNorma(APIView):
     parser_classes = [MultiPartParser]
 
     def post(self, request):
+        
         def decodificar_se_bytes(valor):
             if isinstance(valor, bytes):
                 return valor.decode('utf-8')
@@ -392,46 +393,41 @@ class inserirNorma(APIView):
 
         print("Metadados decodificados:", meta_data)
 
-        arquivos = request.FILES.get("arquivo_pdf")
+        arquivo = request.FILES.get("arquivo_pdf")
 
-        if not arquivos:
+        if not arquivo:
             return Response({"erro": "Nenhum arquivo enviado."}, status=400)
 
-        resultados = []
+        if getattr(arquivo, 'name', None) and not arquivo.name.lower().endswith(".pdf"):
+            return Response({"erro": "Formato inválido. O arquivo deve ser um PDF."}, status=400)
 
-        for arquivo in arquivos:
-            if getattr(arquivo, 'name', None) and not arquivo.name.lower().endswith(".pdf"):
-                resultados.append({
-                    "arquivo": arquivo.name,
-                    "erro": "Formato inválido"
-                })
-                continue
+        tmp_dir = Path(tempfile.mkdtemp())
+        tmp_path = tmp_dir / arquivo.name
+        resultado_insercao = {}
 
-            tmp_dir = Path(tempfile.mkdtemp())
-            tmp_path = tmp_dir / arquivo.name
+        try:
+            with open(tmp_path, "wb") as f:
+                for chunk in arquivo.chunks():
+                    f.write(chunk)
 
-            try:
-                with open(tmp_path, "wb") as f:
-                    for chunk in arquivo.chunks():
-                        f.write(chunk)
+            with _lock:
+                resultado_insercao = inserir_norma(str(tmp_path), metadados=meta_data)
 
-                with _lock:
-                    resultado = inserir_norma(str(tmp_path), metadados=meta_data)
+        except Exception as e:
+            return Response({"erro": "Falha ao processar o arquivo", "detalhe": str(e)}, status=500)
 
-                resultados.append({
-                    "arquivo": arquivo.name,
-                    **resultado
-                })
-
-            finally:
-                if tmp_path.exists():
-                    tmp_path.unlink()
-                if tmp_dir.exists():
-                    tmp_dir.rmdir()
+        finally:
+            if tmp_path.exists():
+                tmp_path.unlink()
+            if tmp_dir.exists():
+                tmp_dir.rmdir()
 
         return Response({
-            "resultados": resultados
-        }, status=207)
+            "resultados": [{
+                "arquivo": arquivo.name,
+                **resultado_insercao
+            }]
+        }, status=200)
 
 class GerarPlanilhaEletrica(APIView):
     permission_classes = [AllowAny]
