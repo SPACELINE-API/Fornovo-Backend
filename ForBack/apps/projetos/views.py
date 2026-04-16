@@ -13,24 +13,25 @@ class cadastrarProjeto(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+
+        engenheiro_id = request.data.get("engenheiro")
         serializer = ProjetoSerializer(data=request.data)
 
         if serializer.is_valid():
+            try:
 
-            usuario_padrao = Usuario.objects.first()
+                usuario_selecionado = Usuario.objects.get(id_usuario=engenheiro_id)
 
-            if not usuario_padrao:
-                return Response(
-                    {"erro": "Nenhum usuário cadastrado no sistema."},
-                    status=400
-                )
+                serializer.save(engenheiro=usuario_selecionado)
 
-            serializer.save(engenheiro=usuario_padrao)
-
-            return Response({
-                "mensagem": "Projeto criado com sucesso",
-                "dados": serializer.data
-            }, status=201)
+                return Response({
+                        "mensagem": "Projeto criado com sucesso",
+                        "dados": serializer.data
+                    }, status=201)
+            except Usuario.DoesNotExist:
+                return Response({"erro": "O engenheiro selecionado não existe."}, status=400)
+            except Exception as e:
+                return Response({"erro": str(e)}, status=400)
 
         return Response(serializer.errors, status=400)
 
