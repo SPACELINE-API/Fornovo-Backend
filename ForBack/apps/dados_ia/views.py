@@ -215,21 +215,13 @@ class ProcessarProjetoIA(APIView):
         if not projeto_id:
             return Response({"erro": "O campo 'projeto_id' é obrigatório."}, status=400)
 
-        # Buscar projeto
         try:
             projeto = Projeto.objects.get(id_projeto=projeto_id)
         except Projeto.DoesNotExist:
             return Response({"erro": "Projeto não encontrado."}, status=404)
 
-        # Atualizando status via CA.4 e Timeout handling implícito por endpoint longo
-        projeto.status = 'Em andamento'
-        projeto.save()
-
-        # RN.1: Verificar o arquivo CAD importado
         arquivo = Arquivo.objects.filter(projeto=projeto).last()
         if not arquivo:
-            projeto.status = 'Pendente'
-            projeto.save()
             return Response({"erro": "Nenhum arquivo CAD associado (RN.1)."}, status=404)
 
         try:
@@ -239,7 +231,7 @@ class ProcessarProjetoIA(APIView):
 
             input_dir = None
             output_dir = None
-            # Integração com o Conversor de Arquivos caso seja DWG
+            
             if arquivo_path.lower().endswith(".dwg"):
                 if not oda.is_oda_ready():
                     return Response({"erro": "Conversor ODA não instalado."}, status=500)
@@ -266,12 +258,9 @@ class ProcessarProjetoIA(APIView):
                 
                 dxf_path = str(dxf_files[0])
             
-            # Disparar a extração de dados (CA.3 trata a geometria inválida ou corrupção)
             try:
                 dados_json = extractor.processar_dxf_para_json(str(dxf_path), gerar_chunks=False)
             except Exception as e:
-                projeto.status = 'Pendente'
-                projeto.save()
                 return Response({
                     "erro": "Falha na extração de geometria (arquivo corrompido ou inválido, CA.3)",
                     "detalhe": str(e)
@@ -284,24 +273,18 @@ class ProcessarProjetoIA(APIView):
                     for f in output_dir.iterdir(): f.unlink()
                     output_dir.rmdir()
 
-            # Enviar dados ao IA Module Real (Ollama Ollama_execute)
             normas_projeto = projeto.normas.all()
             
             try:
                 ollama_installer.ensure_ollama_ready()
                 retorno_ia = executar_agente(dados_json)
             except Exception as e:
-                projeto.status = 'Pendente'
-                projeto.save()
                 return Response({"erro": "Falha na execução do agente da IA", "detalhe": str(e)}, status=500)
             
-            # Timeouts monitorados - Logs (CA.4 time monitoring)
             response_time = time.time() - start_time
             if response_time > 60:
                 print(f"Alerta: A extração e o processamento (Motor de IA Ollama) demoraram mais do que o normal ({response_time:.2f} s).")
 
-            # Serviços de Salvamento - Tabelas de IA
-            # Utilizar o model correto salvando no DB
             dados_bd = DadosExtraidos.objects.create(arquivo=arquivo, dados=dados_json)
             
             insights_bd = []
@@ -312,13 +295,8 @@ class ProcessarProjetoIA(APIView):
                     norma_obj = normas_projeto.first()
                     
                 if norma_obj:
-                    # Associação de insights (CA.2)
                     log = LogValidacao.objects.create(projeto=projeto, norma=norma_obj, dados=item)
                     insights_bd.append(log.id_log)
-                    
-            # Setando projeto concluído CA.4 endpoint terminando o processamento
-            projeto.status = 'Concluído'
-            projeto.save()
 
             retorno_ia["dados_extraidos_id"] = dados_bd.id_dados
             retorno_ia["validacoes_logs_ids"] = insights_bd
@@ -327,8 +305,8 @@ class ProcessarProjetoIA(APIView):
             return Response(retorno_ia, status=200)
 
         except Exception as generic_e:
-            projeto.status = 'Pendente'
-            projeto.save()
+            import traceback
+            traceback.print_exc()
             return Response({"erro": "Falha interna do Motor de Processamento", "detalhe": str(generic_e)}, status=500)
 
 
@@ -368,46 +346,66 @@ class inserirNorma(APIView):
     parser_classes = [MultiPartParser]
 
     def post(self, request):
-        arquivos = request.FILES.getlist("norma")
+        
+        def decodificar_se_bytes(valor):
+            if isinstance(valor, bytes):
+                return valor.decode('utf-8')
+            if isinstance(valor, list) and len(valor) > 0:
+                item = valor[0]
+                return item.decode('utf-8') if isinstance(item, bytes) else item
+            return valor
 
-        if not arquivos:
+        codigo = decodificar_se_bytes(request.data.get("codigo"))
+        nome = decodificar_se_bytes(request.data.get("nome"))
+        ano = decodificar_se_bytes(request.data.get("ano"))
+        serie = decodificar_se_bytes(request.data.get("serie"))
+        descricao = decodificar_se_bytes(request.data.get("descricao"))
+
+        meta_data = {
+            "codigo": codigo,
+            "nome": nome,
+            "ano": ano,
+            "serie": serie,
+            "descricao": descricao
+        }
+
+        print("Metadados decodificados:", meta_data)
+
+        arquivo = request.FILES.get("arquivo_pdf")
+
+        if not arquivo:
             return Response({"erro": "Nenhum arquivo enviado."}, status=400)
 
-        resultados = []
+        if getattr(arquivo, 'name', None) and not arquivo.name.lower().endswith(".pdf"):
+            return Response({"erro": "Formato inválido. O arquivo deve ser um PDF."}, status=400)
 
-        for arquivo in arquivos:
-            if not arquivo.name.lower().endswith(".pdf"):
-                resultados.append({
-                    "arquivo": arquivo.name,
-                    "erro": "Formato inválido"
-                })
-                continue
+        tmp_dir = Path(tempfile.mkdtemp())
+        tmp_path = tmp_dir / arquivo.name
+        resultado_insercao = {}
 
-            tmp_dir = Path(tempfile.mkdtemp())
-            tmp_path = tmp_dir / arquivo.name
+        try:
+            with open(tmp_path, "wb") as f:
+                for chunk in arquivo.chunks():
+                    f.write(chunk)
 
-            try:
-                with open(tmp_path, "wb") as f:
-                    for chunk in arquivo.chunks():
-                        f.write(chunk)
+            with _lock:
+                resultado_insercao = inserir_norma(str(tmp_path), metadados=meta_data)
 
-                with _lock:
-                    resultado = inserir_norma(str(tmp_path))
+        except Exception as e:
+            return Response({"erro": "Falha ao processar o arquivo", "detalhe": str(e)}, status=500)
 
-                resultados.append({
-                    "arquivo": arquivo.name,
-                    **resultado
-                })
-
-            finally:
-                if tmp_path.exists():
-                    tmp_path.unlink()
-                if tmp_dir.exists():
-                    tmp_dir.rmdir()
+        finally:
+            if tmp_path.exists():
+                tmp_path.unlink()
+            if tmp_dir.exists():
+                tmp_dir.rmdir()
 
         return Response({
-            "resultados": resultados
-        }, status=207)
+            "resultados": [{
+                "arquivo": arquivo.name,
+                **resultado_insercao
+            }]
+        }, status=200)
 
 class GerarPlanilhaEletrica(APIView):
     permission_classes = [AllowAny]
