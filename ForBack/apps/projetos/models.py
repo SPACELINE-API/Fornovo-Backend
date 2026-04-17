@@ -71,10 +71,11 @@ class Projeto(models.Model):
             status_atual = projeto_antigo.status
             novo_status = self.status
 
-            if novo_status not in transicaoStatus.get(status_atual, []):
-                raise ValidationError(
-                    f"Não é permitido mudar de '{status_atual}' para '{novo_status}'."
-                )
+            if novo_status != status_atual:
+                if novo_status not in transicaoStatus.get(status_atual, []):
+                    raise ValidationError(
+                        f"Não é permitido mudar de '{status_atual}' para '{novo_status}'."
+                    )
     
     # Essa função serve para valdiar a função clean
     def save(self, *args, **kwargs):
