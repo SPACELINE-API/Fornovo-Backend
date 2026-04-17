@@ -445,8 +445,6 @@ class ativarNorma(APIView):
 
     def post(self, request, id):
         try:
-            print(id)
-
             if not id:
                 return Response({"erro":"erro de id"}, status = 400)
             
@@ -466,18 +464,6 @@ class ativarNorma(APIView):
             }
 
             pdf_nome = Path(str(norma.arquivo_pdf)).name.lower()
-
-            print("RAW:", MEDIA_PATH)
-            print("RESOLVED:", MEDIA_PATH.resolve())
-            print("EXISTS:", MEDIA_PATH.exists())
-            print("IS DIR:", MEDIA_PATH.is_dir())
-            print("IS FILE:", MEDIA_PATH.is_file())
-
-            p = Path(str(MEDIA_PATH))
-
-            print("TYPE:", type(p))
-            print("PARENTS:", list(p.parents))
-            print("STAT:", p.stat())
 
             arquivo_encontrado = next(
                 (f.resolve() for f in MEDIA_PATH.iterdir()
