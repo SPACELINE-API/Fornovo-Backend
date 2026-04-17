@@ -75,7 +75,6 @@ def inserir_norma(pdf_path: str, metadados: dict) -> dict:
         "descricao": metadados.get("descricao", "") if metadados else ""
     }
     
-    # Se o dict de metadados trouxer campos extra (como id_norma), eles são adicionados aqui
     if metadados:
         for k, v in metadados.items():
             if k not in metadados_base:
@@ -92,8 +91,8 @@ def inserir_norma(pdf_path: str, metadados: dict) -> dict:
         "lotes": total_lotes
     }
 
-def apagar_norma(id_norma: int) -> bool:
+def apagar_norma(codigo: int) -> bool:
     db = get_db()
-    db.delete(where={"id_norma": id_norma})
+    db.delete(where={"codigo": codigo})
     return True
 

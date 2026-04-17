@@ -22,7 +22,7 @@ from .models import DadosExtraidos, LogValidacao, DadosInseridosManualmente
 from apps.projetos.models import Projeto, Norma, Arquivo
 from .services import (chroma_normas as agente, oda_installer as oda, extractorDXF as extractor, 
                        ollama_installer)
-from .services.chroma_normas import inserir_norma
+from .services.chroma_normas import inserir_norma, apagar_norma
 from .services.ollama_execute import executar_agente
 import json
 from django.http import HttpResponse
@@ -345,9 +345,8 @@ class inserirNorma(APIView):
     permission_classes = [AllowAny]
     parser_classes = [MultiPartParser]
 
-    def post(self, request):
-        
-        def decodificar_se_bytes(valor):
+    @staticmethod
+    def decodificar_se_bytes(valor):
             if isinstance(valor, bytes):
                 return valor.decode('utf-8')
             if isinstance(valor, list) and len(valor) > 0:
@@ -355,11 +354,13 @@ class inserirNorma(APIView):
                 return item.decode('utf-8') if isinstance(item, bytes) else item
             return valor
 
-        codigo = decodificar_se_bytes(request.data.get("codigo"))
-        nome = decodificar_se_bytes(request.data.get("nome"))
-        ano = decodificar_se_bytes(request.data.get("ano"))
-        serie = decodificar_se_bytes(request.data.get("serie"))
-        descricao = decodificar_se_bytes(request.data.get("descricao"))
+    def post(self, request):
+
+        codigo = self.decodificar_se_bytes(request.data.get("codigo"))
+        nome = self.decodificar_se_bytes(request.data.get("nome"))
+        ano = self.decodificar_se_bytes(request.data.get("ano"))
+        serie = self.decodificar_se_bytes(request.data.get("serie"))
+        descricao = self.decodificar_se_bytes(request.data.get("descricao"))
 
         meta_data = {
             "codigo": codigo,
@@ -406,6 +407,41 @@ class inserirNorma(APIView):
                 **resultado_insercao
             }]
         }, status=200)
+
+    def delete(self, request, id):
+        try:
+            print(id)
+
+            if not id:
+                return Response({"erro":"erro de id"}, status = 400)
+            
+            try:
+                norma = Norma.objects.get(id_norma = id)
+            except Norma.DoesNotExist:
+                return Response({"erro":"norma não encontrada"}, status=400)
+
+            codigo = norma.codigo
+            print(f"codigo da norma {codigo}")
+
+            resultado = apagar_norma(codigo)
+
+            if resultado:
+                return Response({
+                    "mensagem": "Norma removida com sucesso.",
+                    "codigo": codigo
+                }, status=200)
+
+            return Response({
+                "erro": "Falha ao remover no ChromaDB.",
+                "codigo": codigo
+            }, status=500)
+
+        except Exception as e:
+            return Response({
+                "erro": "Falha ao remover a norma.",
+                "detalhe": str(e)
+            }, status=500)
+
 
 class GerarPlanilhaEletrica(APIView):
     permission_classes = [AllowAny]
