@@ -31,7 +31,6 @@ from .services.memorial.levantamento_campo import extrair_levantamento_campo_par
 from rest_framework import status
 from django.http import FileResponse
 
-
 from .services import oda_installer as oda, extractorDXF as extractor
 from .services import ollama_installer
 from .services.ollama_execute import executar_agente
@@ -41,6 +40,9 @@ from .services.memorial.memorial_calculo import extrair_memorial_calculo
 from .services.memorial.movimento_solo import extrair_movimento_solo
 
 _lock = threading.Lock()
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+MEDIA_PATH = BASE_DIR / "media" / "nbr-pdf"
 
 class CadastrarDadosExtraidos(APIView):
     permission_classes = [AllowAny]
@@ -410,8 +412,6 @@ class inserirNorma(APIView):
 
     def delete(self, request, id):
         try:
-            print(id)
-
             if not id:
                 return Response({"erro":"erro de id"}, status = 400)
             
@@ -421,8 +421,6 @@ class inserirNorma(APIView):
                 return Response({"erro":"norma não encontrada"}, status=400)
 
             codigo = norma.codigo
-            print(f"codigo da norma {codigo}")
-
             resultado = apagar_norma(codigo)
 
             if resultado:
@@ -441,6 +439,80 @@ class inserirNorma(APIView):
                 "erro": "Falha ao remover a norma.",
                 "detalhe": str(e)
             }, status=500)
+
+class ativarNorma(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, id):
+        try:
+            print(id)
+
+            if not id:
+                return Response({"erro":"erro de id"}, status = 400)
+            
+            try:
+                norma = Norma.objects.get(id_norma = id)
+            except Norma.DoesNotExist:
+                return Response({"erro":"norma não encontrada"}, status=400)
+
+            norma = Norma.objects.get(id_norma = id)
+
+            meta_data = {
+            "codigo": norma.codigo,
+            "nome": norma.nome,
+            "ano": norma.ano,
+            "serie": norma.serie,
+            "descricao": norma.descricao
+            }
+
+            pdf_nome = Path(str(norma.arquivo_pdf)).name.lower()
+
+            print("RAW:", MEDIA_PATH)
+            print("RESOLVED:", MEDIA_PATH.resolve())
+            print("EXISTS:", MEDIA_PATH.exists())
+            print("IS DIR:", MEDIA_PATH.is_dir())
+            print("IS FILE:", MEDIA_PATH.is_file())
+
+            p = Path(str(MEDIA_PATH))
+
+            print("TYPE:", type(p))
+            print("PARENTS:", list(p.parents))
+            print("STAT:", p.stat())
+
+            arquivo_encontrado = next(
+                (f.resolve() for f in MEDIA_PATH.iterdir()
+                if f.is_file() and f.name.lower() == pdf_nome),
+                None)
+
+            if not arquivo_encontrado:
+                return Response({"erro": "arquivo PDF não encontrado no /media"}, status=404)
+
+            resultado_insercao = inserir_norma(
+                str(arquivo_encontrado),
+                metadados=meta_data
+            )
+
+            if not resultado_insercao.get("ok"):
+                return Response({"erro": "Falha ao inserir norma no ChromaDB",
+                "resultado": resultado_insercao}, status=500)
+
+            return Response({
+                "mensagem": "Norma ativada com sucesso",
+                "arquivo": pdf_nome,
+                "resultado_insercao": {
+                    "ok": resultado_insercao.get("ok"),
+                    "chunks_inseridos": resultado_insercao.get("chunks_inseridos"),
+                    "lotes": resultado_insercao.get("lotes")
+                }
+            }, status=200)         
+            
+        except Exception as e:
+            return Response({
+                "erro": "Falha ao ativar a norma.",
+                "detalhe": str(e)
+            }, status=500)
+
+
 
 
 class GerarPlanilhaEletrica(APIView):
