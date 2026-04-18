@@ -6,7 +6,8 @@ from langchain_ollama import OllamaEmbeddings
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-CHROMA_DIR = Path.home() / ".chroma_normas_db"
+BASE_DIR = Path(__file__).resolve().parents[3]
+CHROMA_DIR = BASE_DIR / "media" / "chroma_normas_db"
 MODELO_EMBEDDING = "nomic-embed-text"
 
 
@@ -124,4 +125,3 @@ def apagar_norma(codigo: int) -> bool:
     db = get_db()
     db.delete(where={"codigo": codigo})
     return True
-
