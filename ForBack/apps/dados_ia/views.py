@@ -393,6 +393,7 @@ class inserirNorma(APIView):
 
             with _lock:
                 resultado_insercao = inserir_norma(str(tmp_path), metadados=meta_data)
+                print(resultado_insercao)
 
         except Exception as e:
             return Response({"erro": "Falha ao processar o arquivo", "detalhe": str(e)}, status=500)
