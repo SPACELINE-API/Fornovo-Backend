@@ -20,8 +20,7 @@ from django.core.files.base import ContentFile
 
 from .models import DadosExtraidos, LogValidacao, DadosInseridosManualmente
 from apps.projetos.models import Projeto, Norma, Arquivo
-from .services import (chroma_normas as agente, oda_installer as oda, extractorDXF as extractor, 
-                       ollama_installer)
+from .services import (chroma_normas as agente, oda_installer as oda, extractorDXF as extractor)
 from .services.chroma_normas import inserir_norma
 from .services.ollama_execute import executar_agente
 import json
