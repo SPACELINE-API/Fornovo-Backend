@@ -16,7 +16,8 @@ from .views import (
     DebugEletricaView,
     MemorialCalculo,
     GerarPlanilhaMovimentoSolo,
-    SalvarMemorialCalculo
+    SalvarMemorialCalculo,
+    ativarNorma
 )
 
 app_name = 'dados_ia'
@@ -28,7 +29,9 @@ urlpatterns = [
     path('dwg-dxf', ConverterArquivo.as_view(), name='converter_arquivo'),
     path('processar-ia', ProcessarProjetoIA.as_view(), name='processar_projeto_ia'),
     path('executar-agente', executarAgente.as_view(), name='executar-agente'),
-    path('inserir-norma', inserirNorma.as_view(), name='inserir-norma'),
+    path('inserir-norma/<int:id>', inserirNorma.as_view(), name='inserir-norma'),
+    path('inserir-norma', inserirNorma.as_view()),
+    path('ativar-norma/<int:id>', ativarNorma.as_view()),
     path('planilha-eletrica', GerarPlanilhaEletrica.as_view(), name='planilha-eletrica'),
     path('gerar-levantamento', GerarPlanilhaLevantamentoAPIView.as_view(), name='memorial-calculo'),
     path('gerar-servicos_preliminares', GerarPlanilhaServicosPreliminaresAPIView.as_view(), name='servicos_preliminares'),

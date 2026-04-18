@@ -22,7 +22,7 @@ from .models import DadosExtraidos, LogValidacao, DadosInseridosManualmente
 from apps.projetos.models import Projeto, Norma, Arquivo
 from .services import (chroma_normas as agente, oda_installer as oda, extractorDXF as extractor, 
                        ollama_installer)
-from .services.chroma_normas import inserir_norma
+from .services.chroma_normas import inserir_norma, apagar_norma
 from .services.ollama_execute import executar_agente
 import json
 from django.http import HttpResponse
@@ -30,7 +30,6 @@ import threading
 from .services.memorial.levantamento_campo import extrair_levantamento_campo_para_xlsx, mesclar_form_com_dxf
 from rest_framework import status
 from django.http import FileResponse
-
 
 from .services import oda_installer as oda, extractorDXF as extractor
 from .services import ollama_installer
@@ -41,6 +40,9 @@ from .services.memorial.memorial_calculo import extrair_memorial_calculo
 from .services.memorial.movimento_solo import extrair_movimento_solo
 
 _lock = threading.Lock()
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+MEDIA_PATH = BASE_DIR / "media" / "nbr-pdf"
 
 class CadastrarDadosExtraidos(APIView):
     permission_classes = [AllowAny]
@@ -345,9 +347,8 @@ class inserirNorma(APIView):
     permission_classes = [AllowAny]
     parser_classes = [MultiPartParser]
 
-    def post(self, request):
-        
-        def decodificar_se_bytes(valor):
+    @staticmethod
+    def decodificar_se_bytes(valor):
             if isinstance(valor, bytes):
                 return valor.decode('utf-8')
             if isinstance(valor, list) and len(valor) > 0:
@@ -355,11 +356,13 @@ class inserirNorma(APIView):
                 return item.decode('utf-8') if isinstance(item, bytes) else item
             return valor
 
-        codigo = decodificar_se_bytes(request.data.get("codigo"))
-        nome = decodificar_se_bytes(request.data.get("nome"))
-        ano = decodificar_se_bytes(request.data.get("ano"))
-        serie = decodificar_se_bytes(request.data.get("serie"))
-        descricao = decodificar_se_bytes(request.data.get("descricao"))
+    def post(self, request):
+
+        codigo = self.decodificar_se_bytes(request.data.get("codigo"))
+        nome = self.decodificar_se_bytes(request.data.get("nome"))
+        ano = self.decodificar_se_bytes(request.data.get("ano"))
+        serie = self.decodificar_se_bytes(request.data.get("serie"))
+        descricao = self.decodificar_se_bytes(request.data.get("descricao"))
 
         meta_data = {
             "codigo": codigo,
@@ -390,6 +393,7 @@ class inserirNorma(APIView):
 
             with _lock:
                 resultado_insercao = inserir_norma(str(tmp_path), metadados=meta_data)
+                print(resultado_insercao)
 
         except Exception as e:
             return Response({"erro": "Falha ao processar o arquivo", "detalhe": str(e)}, status=500)
@@ -406,6 +410,97 @@ class inserirNorma(APIView):
                 **resultado_insercao
             }]
         }, status=200)
+
+    def delete(self, request, id):
+        try:
+            if not id:
+                return Response({"erro":"erro de id"}, status = 400)
+            
+            try:
+                norma = Norma.objects.get(id_norma = id)
+            except Norma.DoesNotExist:
+                return Response({"erro":"norma não encontrada"}, status=400)
+
+            codigo = norma.codigo
+            resultado = apagar_norma(codigo)
+
+            if resultado:
+                return Response({
+                    "mensagem": "Norma removida com sucesso.",
+                    "codigo": codigo
+                }, status=200)
+
+            return Response({
+                "erro": "Falha ao remover no ChromaDB.",
+                "codigo": codigo
+            }, status=500)
+
+        except Exception as e:
+            return Response({
+                "erro": "Falha ao remover a norma.",
+                "detalhe": str(e)
+            }, status=500)
+
+class ativarNorma(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, id):
+        try:
+            if not id:
+                return Response({"erro":"erro de id"}, status = 400)
+            
+            try:
+                norma = Norma.objects.get(id_norma = id)
+            except Norma.DoesNotExist:
+                return Response({"erro":"norma não encontrada"}, status=400)
+
+            norma = Norma.objects.get(id_norma = id)
+
+            meta_data = {
+            "codigo": norma.codigo,
+            "nome": norma.nome,
+            "ano": norma.ano,
+            "serie": norma.serie,
+            "descricao": norma.descricao
+            }
+
+            pdf_nome = Path(str(norma.arquivo_pdf)).name.lower()
+
+            arquivo_encontrado = next(
+                (f.resolve() for f in MEDIA_PATH.iterdir()
+                if f.is_file() and f.name.lower() == pdf_nome),
+                None)
+
+            if not arquivo_encontrado:
+                return Response({"erro": "arquivo PDF não encontrado no /media"}, status=404)
+
+            resultado_insercao = inserir_norma(
+                str(arquivo_encontrado),
+                metadados=meta_data
+            )
+
+            if not resultado_insercao.get("ok"):
+                return Response({"erro": "Falha ao inserir norma no ChromaDB",
+                "resultado": resultado_insercao}, status=500)
+
+            return Response({
+                "mensagem": "Norma ativada com sucesso",
+                "arquivo": pdf_nome,
+                "resultado_insercao": {
+                    "ok": resultado_insercao.get("ok"),
+                    "chunks_inseridos": resultado_insercao.get("chunks_inseridos"),
+                    "lotes": resultado_insercao.get("lotes")
+                }
+            }, status=200)         
+            
+        except Exception as e:
+            return Response({
+                "erro": "Falha ao ativar a norma.",
+                "detalhe": str(e)
+            }, status=500)
+
+
+
 
 class GerarPlanilhaEletrica(APIView):
     permission_classes = [AllowAny]
