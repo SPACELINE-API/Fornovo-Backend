@@ -2,10 +2,10 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from .models import Projeto, Arquivo, padraoStatus
+from .models import Projeto, Arquivo, padraoStatus, EspecificacaoIA
 from django.core.exceptions import ValidationError
 from apps.usuarios.models import Usuario
-from .serializers import ProjetoSerializer
+from .serializers import ProjetoSerializer, EspecificacaoIASerializer
 from django.http import FileResponse
 import hashlib
 
@@ -270,3 +270,144 @@ class VerificarStatusIA(APIView):
             })
         except Projeto.DoesNotExist:
             return Response({"erro": "Projeto não encontrado"}, status=404)
+
+
+class UploadEspecificacao(APIView):
+    """
+    POST /api/projetos/especificacoes/upload
+
+    Recebe um arquivo .docx gerado externamente (SPACELINE-54),
+    salva em /media/especificacoes/ (CA.1 / CA.2) e cria o
+    registro no banco com seus metadados (CA.3 / CA.4).
+
+    Body (multipart/form-data):
+      - arquivo      : arquivo .docx  [obrigatório]
+      - projeto_id   : UUID do projeto [obrigatório]  → garante RN.1
+      - titulo       : str [obrigatório]
+      - versao       : str [opcional, default '1.0']
+      - descricao    : str [opcional]
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        arquivo = request.FILES.get('arquivo')
+        projeto_id = request.data.get('projeto_id')
+        titulo = request.data.get('titulo')
+        versao = request.data.get('versao', '1.0')
+        descricao = request.data.get('descricao', '')
+
+        # --- Validações básicas ---
+        if not arquivo:
+            return Response({'erro': 'Nenhum arquivo enviado.'}, status=400)
+
+        if not projeto_id:
+            return Response({'erro': 'projeto_id é obrigatório.'}, status=400)
+
+        if not titulo:
+            return Response({'erro': 'titulo é obrigatório.'}, status=400)
+
+        # Valida extensão — todos os formatos Word são aceitos
+        EXTENSOES_WORD = {'docx', 'doc', 'docm', 'dotx', 'dotm', 'dot', 'odt', 'rtf'}
+        ext = arquivo.name.rsplit('.', 1)[-1].lower()
+        if ext not in EXTENSOES_WORD:
+            return Response(
+                {'erro': f"Extensão '{ext}' não permitida. Formatos aceitos: {', '.join(sorted(EXTENSOES_WORD))}."},
+                status=400
+            )
+
+        # --- RN.1: projeto deve existir ---
+        try:
+            projeto = Projeto.objects.get(id_projeto=projeto_id)
+        except Projeto.DoesNotExist:
+            return Response(
+                {'erro': 'Projeto não encontrado. A especificação deve estar vinculada a um projeto existente.'},
+                status=404
+            )
+
+        # --- CA.2: salva arquivo em /media/especificacoes/ e CA.3: cria registro ---
+        try:
+            especificacao = EspecificacaoIA.objects.create(
+                projeto=projeto,
+                arquivo=arquivo,       # Django salva automaticamente em upload_to='especificacoes/'
+                titulo=titulo,
+                versao=versao,
+                descricao=descricao,
+            )
+        except Exception as e:
+            return Response({'erro': f'Erro ao salvar especificação: {str(e)}'}, status=500)
+
+        serializer = EspecificacaoIASerializer(especificacao, context={'request': request})
+        return Response(
+            {
+                'mensagem': 'Especificação salva com sucesso.',
+                'dados': serializer.data,
+            },
+            status=201
+        )
+
+
+class BaixarEspecificacao(APIView):
+    """
+    GET /api/projetos/especificacoes/<id_especificacao>/
+
+    Retorna metadados da especificação em JSON.
+
+    GET /api/projetos/especificacoes/<id_especificacao>/?download=1
+
+    Recupera e retorna o arquivo .docx para download (CA.4).
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, id_especificacao):
+        try:
+            especificacao = EspecificacaoIA.objects.get(id_especificacao=id_especificacao)
+        except EspecificacaoIA.DoesNotExist:
+            return Response({'erro': 'Especificação não encontrada.'}, status=404)
+
+        # ?download=1 → envia o arquivo; caso contrário retorna metadados JSON
+        if request.GET.get('download') == '1':
+            if not especificacao.arquivo:
+                return Response({'erro': 'Arquivo não encontrado no servidor.'}, status=404)
+            nome_arquivo = especificacao.arquivo.name.split('/')[-1]
+            ext_download = nome_arquivo.rsplit('.', 1)[-1].lower()
+            CONTENT_TYPES = {
+                'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'docm': 'application/vnd.ms-word.document.macroEnabled.12',
+                'dotx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+                'dotm': 'application/vnd.ms-word.template.macroEnabled.12',
+                'dot':  'application/msword',
+                'doc':  'application/msword',
+                'odt':  'application/vnd.oasis.opendocument.text',
+                'rtf':  'application/rtf',
+            }
+            content_type = CONTENT_TYPES.get(ext_download, 'application/octet-stream')
+            return FileResponse(
+                especificacao.arquivo.open('rb'),
+                as_attachment=True,
+                filename=nome_arquivo,
+                content_type=content_type
+            )
+
+        serializer = EspecificacaoIASerializer(especificacao, context={'request': request})
+        return Response(serializer.data, status=200)
+
+
+class ListarEspecificacoes(APIView):
+    """
+    GET /api/projetos/<id_projeto>/especificacoes/
+
+    Lista todas as especificações geradas para um projeto (RN.1).
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, id_projeto):
+        try:
+            projeto = Projeto.objects.get(id_projeto=id_projeto)
+        except Projeto.DoesNotExist:
+            return Response({'erro': 'Projeto não encontrado.'}, status=404)
+
+        especificacoes = EspecificacaoIA.objects.filter(projeto=projeto)
+        serializer = EspecificacaoIASerializer(
+            especificacoes, many=True, context={'request': request}
+        )
+        return Response(serializer.data, status=200)
