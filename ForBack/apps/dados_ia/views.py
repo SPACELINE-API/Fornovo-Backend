@@ -18,7 +18,7 @@ import time
 import hashlib
 from django.core.files.base import ContentFile
 
-from .models import DadosExtraidos, LogValidacao, DadosInseridosManualmente
+from .models import DadosExtraidos, LogValidacao, DadosInseridosManualmente, RelatorioConformidade
 from apps.projetos.models import Projeto, Norma, Arquivo
 from .services import (chroma_normas as agente, oda_installer as oda, extractorDXF as extractor, 
                        ollama_installer)
@@ -38,6 +38,7 @@ from .services.chroma_normas import inserir_norma
 from .services.memorial.serviços_preliminares import extrair_servicos_preliminares_para_xlsx
 from .services.memorial.memorial_calculo import extrair_memorial_calculo
 from .services.memorial.movimento_solo import extrair_movimento_solo
+from .utils.relatorio import gerar_docx_bytes
 
 _lock = threading.Lock()
 
@@ -337,9 +338,18 @@ class executarAgente(APIView):
             relatorio_md = resultado_ia.get("relatorio_md", "Erro ao processar.")
         except Exception as e:
             return Response({"erro": "Falha na execução do agente.", "detalhe": str(e)}, status=500)
+        
+        docx_bytes = gerar_docx_bytes(relatorio_md)
 
-        response = HttpResponse(relatorio_md, content_type="text/markdown; charset=utf-8")
-        response["Content-Disposition"] = 'attachment; filename="relatorio_conformidade.md"'
+        relatorio = RelatorioConformidade()
+        relatorio.arquivo.save("relatorio_conformidade.docx", ContentFile(docx_bytes))
+        relatorio.save()
+
+        response = HttpResponse(
+            docx_bytes,
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+        response["Content-Disposition"] = 'attachment; filename="relatorio_conformidade.docx"'
         return response
 
 
