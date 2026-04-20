@@ -43,6 +43,7 @@ class Projeto(models.Model):
     data_fim = models.DateField(null=True, blank=True)
     
     criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
 
     normas = models.ManyToManyField(
     Norma,
@@ -118,3 +119,36 @@ class ProjetoNorma(models.Model):
 
     class Meta:
         db_table = "projeto_norma"
+
+
+class EspecificacaoIA(models.Model):
+    """
+    Representa um documento de especificação gerado por IA (.docx),
+    vinculado a um projeto existente (RN.1).
+    O arquivo é salvo em /media/especificacoes/ (CA.1 / CA.2).
+    Os metadados e o caminho são persistidos no banco (CA.3 / CA.4).
+    """
+    id_especificacao = models.AutoField(primary_key=True)
+
+    projeto = models.ForeignKey(
+        Projeto,
+        on_delete=models.CASCADE,
+        related_name='especificacoes',
+        db_column='projeto_id'
+    )
+
+    # Caminho do arquivo dentro de /media/ — permite recuperar para download (CA.4)
+    arquivo = models.FileField(upload_to='especificacoes/')
+
+    # Metadados da especificação (CA.3)
+    titulo = models.CharField(max_length=255)
+    versao = models.CharField(max_length=50, default='1.0')
+    descricao = models.TextField(null=True, blank=True)
+    gerado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'especificacoes_ia'
+        ordering = ['-gerado_em']
+
+    def __str__(self):
+        return f"{self.titulo} — {self.projeto.nome_projeto} (v{self.versao})"
