@@ -1,11 +1,18 @@
 from django.urls import path
 from . import views
-from .views import VerificarStatusIA, cadastrarProjeto, deletarArquivo, uploadArquivo, listarProjetos, buscarArquivo, buscarProjeto, ProjetoDelete, ProjetoUpdate, verificarArquivo, AtualizarStatusProjeto
+from .views import (
+    VerificarStatusIA, cadastrarProjeto, deletarArquivo, uploadArquivo,
+    listarProjetos, buscarArquivo, buscarProjeto, ProjetoDelete, ProjetoUpdate,
+    verificarArquivo, AtualizarStatusProjeto,
+    # SPACELINE-54: especificações geradas por IA
+    UploadEspecificacao, BaixarEspecificacao, ListarEspecificacoes,
+)
+
 app_name = 'projetos'
 
 urlpatterns = [
     path('cadastrarProjeto', cadastrarProjeto.as_view(), name='cadastrarProjeto'),
-    path('upload-arquivo', uploadArquivo.as_view(), name='upload-arquivo'), # URL do Upload de Arquivo
+    path('upload-arquivo', uploadArquivo.as_view(), name='upload-arquivo'),
     path('listarProjetos', listarProjetos.as_view(), name='ListarProjetos'),
     path('buscarArquivo/<str:projeto_id>', buscarArquivo.as_view(), name='buscarArquivo'),
     path('buscarProjeto/<str:id_projeto>/', buscarProjeto.as_view()),
@@ -15,4 +22,12 @@ urlpatterns = [
     path('deletarArquivo/<int:id>', deletarArquivo.as_view(), name='deletarArquivo'),
     path('statusIa/<uuid:id_projeto>', VerificarStatusIA.as_view(), name='statusIA'),
     path('atualizarStatus/<uuid:id_projeto>', AtualizarStatusProjeto.as_view(), name='atualizarStatusProjeto'),
-]
+
+    # --- Especificações IA (SPACELINE-54) ---
+    # CA.2 / CA.3: recebe um .docx, persiste em /media e salva no banco
+    path('especificacoes/upload', UploadEspecificacao.as_view(), name='upload-especificacao'),
+    # CA.4: retorna metadados ou o arquivo para download (?download=1)
+    path('especificacoes/<int:id_especificacao>/', BaixarEspecificacao.as_view(), name='baixar-especificacao'),
+    # RN.1: lista especificações de um projeto específico
+    path('<uuid:id_projeto>/especificacoes/', ListarEspecificacoes.as_view(), name='listar-especificacoes'),
+]
