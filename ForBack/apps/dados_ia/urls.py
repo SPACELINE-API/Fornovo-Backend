@@ -7,6 +7,8 @@ from .views import (
     ConverterArquivo,
     StatusMemCal,
     executarAgente,
+    DownloadRelatorio,
+    StatusRelatorio,
     inserirNorma,
     GerarPlanilhaEletrica,
     GerarPlanilhaLevantamentoAPIView,
@@ -42,4 +44,6 @@ urlpatterns = [
     path('salvar-memorial', SalvarMemorialCalculo.as_view(), name='salvar-memorial-calculo'),
     path('status-memorial/', StatusMemCal.as_view(), name='status-memorial-calculo'),
     path('dados-processados/<uuid:projeto_id>', ConsultarDadosProcessadosIA.as_view(), name='consultar_dados_ia'),
+    path('download-relatorio', DownloadRelatorio.as_view(), name='download-relatorio'),
+    path('status-relatorio', StatusRelatorio.as_view(), name='status-relatorio')
 ]
