@@ -1,6 +1,8 @@
 import subprocess
 import requests
 import time
+import urllib.request
+import os
 
 MODELOS = ['nomic-embed-text', 'llama3.1:8b']
 
@@ -38,11 +40,9 @@ def modelos_instalados() -> bool:
 def ensure_ollama_ready():
     if not ollama_instalado():
         print("Instalando Ollama")
-        subprocess.run([
-            "powershell",
-            "-Command",
-            "irm https://ollama.com/install.ps1 | iex"
-        ])
+        installer_path = os.path.join(os.environ.get("TEMP", "C:\\Temp"), "OllamaSetup.exe")
+        urllib.request.urlretrieve("https://ollama.com/download/OllamaSetup.exe", installer_path)
+        subprocess.run([installer_path, "/SILENT"], check=True)
 
     if not ollama_rodando():
         print("Iniciando Ollama")
@@ -57,6 +57,7 @@ def ensure_ollama_ready():
         print("Baixando modelos...")
         for m in MODELOS:
             subprocess.run(["ollama", "pull", m])
+
 
 def ensure_ollama_cuda() -> dict:
     gpu_info = {
