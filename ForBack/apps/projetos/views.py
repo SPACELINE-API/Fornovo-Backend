@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from apps.usuarios.auth.permissions import IsAdm, IsProjetista, IsAdmOrProjetista, IsAdmOrRevisor
 from rest_framework.response import Response
 from .models import Projeto, Arquivo, padraoStatus, EspecificacaoIA
 from django.core.exceptions import ValidationError
@@ -10,7 +11,7 @@ from django.http import FileResponse
 import hashlib
 
 class cadastrarProjeto(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdmOrProjetista]
 
     def post(self, request):
 
@@ -36,7 +37,7 @@ class cadastrarProjeto(APIView):
         return Response(serializer.errors, status=400)
 
 class listarProjetos(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         projetos = Projeto.objects.all()
@@ -45,7 +46,7 @@ class listarProjetos(APIView):
         return Response(serializer.data)   
 
 class buscarProjeto(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, id_projeto):
         projeto = Projeto.objects.get(id_projeto = id_projeto)
@@ -54,7 +55,7 @@ class buscarProjeto(APIView):
         return Response(serializer.data) 
 
 class ProjetoDelete(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdm]
 
     def delete(self, request, id_projeto):
         try:
@@ -69,7 +70,7 @@ class ProjetoDelete(APIView):
             )
 
 class AtualizarStatusProjeto(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdmOrRevisor]
 
     def patch(self, request, id_projeto):
         try:
@@ -104,7 +105,7 @@ class AtualizarStatusProjeto(APIView):
             )
         
 class ProjetoUpdate(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdmOrProjetista]
 
     def patch(self, request, id_projeto):
         try:
@@ -133,7 +134,7 @@ class ProjetoUpdate(APIView):
             )
 
 class uploadArquivo(APIView): # POST Arquivo
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdmOrProjetista]
 
     def post(self, request):
         try:
@@ -176,7 +177,7 @@ class uploadArquivo(APIView): # POST Arquivo
             return Response({"erro": str(e)}, status=400)        
 
 class verificarArquivo(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, id_projeto):
         arquivo = Arquivo.objects.filter(
@@ -201,6 +202,7 @@ class verificarArquivo(APIView):
         )
 
 class buscarArquivo(APIView): # GET Arquivo
+    permission_classes = [IsAuthenticated]
     def get(self, request, projeto_id):
         try:
             arquivo = Arquivo.objects.filter(projeto_id=projeto_id).first()
@@ -243,7 +245,7 @@ class buscarArquivo(APIView): # GET Arquivo
             )
         
 class deletarArquivo(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdm]
 
     def delete(self, request, id):
         try:
@@ -259,7 +261,7 @@ class deletarArquivo(APIView):
             return Response({"erro": "Arquivo não encontrado"}, status=404)
         
 class VerificarStatusIA(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, id_projeto):
         try:
@@ -273,21 +275,7 @@ class VerificarStatusIA(APIView):
 
 
 class UploadEspecificacao(APIView):
-    """
-    POST /api/projetos/especificacoes/upload
-
-    Recebe um arquivo .docx gerado externamente (SPACELINE-54),
-    salva em /media/especificacoes/ (CA.1 / CA.2) e cria o
-    registro no banco com seus metadados (CA.3 / CA.4).
-
-    Body (multipart/form-data):
-      - arquivo      : arquivo .docx  [obrigatório]
-      - projeto_id   : UUID do projeto [obrigatório]  → garante RN.1
-      - titulo       : str [obrigatório]
-      - versao       : str [opcional, default '1.0']
-      - descricao    : str [opcional]
-    """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdmOrProjetista]
 
     def post(self, request):
         arquivo = request.FILES.get('arquivo')
@@ -347,16 +335,7 @@ class UploadEspecificacao(APIView):
 
 
 class BaixarEspecificacao(APIView):
-    """
-    GET /api/projetos/especificacoes/<id_especificacao>/
-
-    Retorna metadados da especificação em JSON.
-
-    GET /api/projetos/especificacoes/<id_especificacao>/?download=1
-
-    Recupera e retorna o arquivo .docx para download (CA.4).
-    """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, id_especificacao):
         try:
@@ -393,12 +372,7 @@ class BaixarEspecificacao(APIView):
 
 
 class ListarEspecificacoes(APIView):
-    """
-    GET /api/projetos/<id_projeto>/especificacoes/
-
-    Lista todas as especificações geradas para um projeto (RN.1).
-    """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, id_projeto):
         try:
@@ -414,12 +388,7 @@ class ListarEspecificacoes(APIView):
 
 
 class DownloadEspecificacao(APIView):
-    """
-    GET /api/projetos/especificacoes/<id_especificacao>/download/
-
-    Retorna diretamente o arquivo .docx para download imediato (CA.1 / CA.2).
-    """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, id_especificacao):
         try:
@@ -454,12 +423,7 @@ class DownloadEspecificacao(APIView):
 
 
 class DownloadUltimaEspecificacao(APIView):
-    """
-    GET /api/projetos/<uuid:id_projeto>/especificacoes/latest/
-
-    Busca a última especificação gerada para o projeto e inicia o download.
-    """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, id_projeto):
         try:
