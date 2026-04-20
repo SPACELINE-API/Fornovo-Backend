@@ -411,3 +411,89 @@ class ListarEspecificacoes(APIView):
             especificacoes, many=True, context={'request': request}
         )
         return Response(serializer.data, status=200)
+
+
+class DownloadEspecificacao(APIView):
+    """
+    GET /api/projetos/especificacoes/<id_especificacao>/download/
+
+    Retorna diretamente o arquivo .docx para download imediato (CA.1 / CA.2).
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, id_especificacao):
+        try:
+            especificacao = EspecificacaoIA.objects.get(id_especificacao=id_especificacao)
+        except EspecificacaoIA.DoesNotExist:
+            return Response({'erro': 'Especificação não encontrada.'}, status=404)
+
+        if not especificacao.arquivo:
+            return Response({'erro': 'Arquivo físico não encontrado no servidor.'}, status=404)
+
+        nome_arquivo = especificacao.arquivo.name.split('/')[-1]
+        ext = nome_arquivo.rsplit('.', 1)[-1].lower()
+
+        CONTENT_TYPES = {
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'docm': 'application/vnd.ms-word.document.macroEnabled.12',
+            'dotx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+            'dotm': 'application/vnd.ms-word.template.macroEnabled.12',
+            'dot':  'application/msword',
+            'doc':  'application/msword',
+            'odt':  'application/vnd.oasis.opendocument.text',
+            'rtf':  'application/rtf',
+        }
+        content_type = CONTENT_TYPES.get(ext, 'application/octet-stream')
+
+        return FileResponse(
+            especificacao.arquivo.open('rb'),
+            as_attachment=True,
+            filename=nome_arquivo,
+            content_type=content_type
+        )
+
+
+class DownloadUltimaEspecificacao(APIView):
+    """
+    GET /api/projetos/<uuid:id_projeto>/especificacoes/latest/
+
+    Busca a última especificação gerada para o projeto e inicia o download.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, id_projeto):
+        try:
+            projeto = Projeto.objects.get(id_projeto=id_projeto)
+        except Projeto.DoesNotExist:
+            return Response({'erro': 'Projeto não encontrado.'}, status=404)
+
+        # O modelo EspecificacaoIA tem ordering = ['-gerado_em']
+        especificacao = EspecificacaoIA.objects.filter(projeto=projeto).first()
+
+        if not especificacao or not especificacao.arquivo:
+            return Response(
+                {'erro': 'Nenhuma especificação encontrada ou arquivo ausente para este projeto.'},
+                status=404
+            )
+
+        nome_arquivo = especificacao.arquivo.name.split('/')[-1]
+        ext = nome_arquivo.rsplit('.', 1)[-1].lower()
+
+        CONTENT_TYPES = {
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'docm': 'application/vnd.ms-word.document.macroEnabled.12',
+            'dotx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+            'dotm': 'application/vnd.ms-word.template.macroEnabled.12',
+            'dot':  'application/msword',
+            'doc':  'application/msword',
+            'odt':  'application/vnd.oasis.opendocument.text',
+            'rtf':  'application/rtf',
+        }
+        content_type = CONTENT_TYPES.get(ext, 'application/octet-stream')
+
+        return FileResponse(
+            especificacao.arquivo.open('rb'),
+            as_attachment=True,
+            filename=nome_arquivo,
+            content_type=content_type
+        )

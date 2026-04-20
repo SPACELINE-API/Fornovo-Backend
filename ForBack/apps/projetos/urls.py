@@ -6,6 +6,7 @@ from .views import (
     verificarArquivo, AtualizarStatusProjeto,
     # SPACELINE-54: especificações geradas por IA
     UploadEspecificacao, BaixarEspecificacao, ListarEspecificacoes,
+    DownloadEspecificacao, DownloadUltimaEspecificacao,
 )
 
 app_name = 'projetos'
@@ -27,7 +28,11 @@ urlpatterns = [
     # CA.2 / CA.3: recebe um .docx, persiste em /media e salva no banco
     path('especificacoes/upload', UploadEspecificacao.as_view(), name='upload-especificacao'),
     # CA.4: retorna metadados ou o arquivo para download (?download=1)
-    path('especificacoes/<int:id_especificacao>/', BaixarEspecificacao.as_view(), name='baixar-especificacao'),
+    path('especificacoes/<int:id_especificacao>/', BaixarEspecificacao.as_view(), name='detalhes-especificacao'),
+    # C.A 1 / C.A 2: Endpoint dedicado para download imediato
+    path('especificacoes/<int:id_especificacao>/download/', DownloadEspecificacao.as_view(), name='download-especificacao'),
+    # Atalho para baixar a última versão de um projeto
+    path('<uuid:id_projeto>/especificacoes/latest/', DownloadUltimaEspecificacao.as_view(), name='download-ultima-especificacao'),
     # RN.1: lista especificações de um projeto específico
     path('<uuid:id_projeto>/especificacoes/', ListarEspecificacoes.as_view(), name='listar-especificacoes'),
 ]
