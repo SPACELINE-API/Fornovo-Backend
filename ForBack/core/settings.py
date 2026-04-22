@@ -129,3 +129,12 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'apps.usuarios.auth.authentication.CustomJWTAuthentication',
+    ),
+}
+
+# Configurações de CORS (Para permitir acesso do Frontend)
+CORS_ALLOW_ALL_ORIGINS = True # Em produção, devemos especificar os domínios permitidos
