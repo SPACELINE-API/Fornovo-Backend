@@ -91,5 +91,15 @@ class DadosInseridosManualmente(models.Model):
         db_table = "dados_inseridos_manualmente"
 
 class RelatorioConformidade(models.Model):
+    projeto = models.ForeignKey(
+        Projeto,
+        on_delete=models.CASCADE,
+        db_column="projeto_id"
+    )
+    nome_arquivo = models.CharField(max_length=255, default='')
+    caminho_arquivo = models.CharField(max_length=500, default='')
     arquivo = models.FileField(upload_to="relatorios/")
     criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "relatorios_conformidade"
