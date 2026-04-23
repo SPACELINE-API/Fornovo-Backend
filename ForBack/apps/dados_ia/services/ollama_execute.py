@@ -254,12 +254,6 @@ def executar_agente(dados_extracao: dict) -> str:
     print(f"  Embeddings: {MODELO_EMBEDDING}")
     print(f"  ChromaDB: {CHROMA_DIR}")
 
-    print("  Aquecendo modelo (warmup)...")
-    try:
-        llm.invoke("Responda apenas: OK")
-    except Exception:
-        pass
-
     total = len(VERIFICACOES)
     print(f"\n[3/3] Executando {total} verificações...\n")
     print("-" * 60)

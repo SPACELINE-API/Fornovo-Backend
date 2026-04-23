@@ -1,14 +1,18 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from apps.usuarios.auth.permissions import IsAdm
 from rest_framework.response import Response
 from .models import Usuario
-from django.contrib.auth.hashers import make_password
-
+from django.contrib.auth.hashers import make_password, check_password
+from django.conf import settings
+import jwt
+import datetime
 
 # Create your views here.
 
 class criarUsuario(APIView):
+    permission_classes = [IsAuthenticated, IsAdm]
     def post(self, request):
         try:
             senha = request.data.get('senha')
@@ -25,16 +29,11 @@ class criarUsuario(APIView):
                 "nome": usuario.nome_usuario
             })
 
-            if not request.data.get('nome'):
-                return Response({"erro": "Nome obrigatório"}, status=400)
-            if not request.data.get('email'):
-                return Response({"erro": "Email obrigatório"}, status=400)
-            if not request.data.get('senha'):
-                return Response({"erro": "Senha obrigatória"}, status=400)
         except Exception as e:
             return Response({"erro": str(e)}, status=400)
 
 class listarUsuario(APIView):
+    permission_classes = [IsAuthenticated, IsAdm]
     def get(self, request):
         usuarios = Usuario.objects.all()
 
@@ -50,6 +49,7 @@ class listarUsuario(APIView):
         return Response(data)
 
 class atualizarStatusUsuario(APIView):
+    permission_classes = [IsAuthenticated, IsAdm]
     def patch(self, request, id):
         try:
             usuario = Usuario.objects.get(id_usuario=id)
@@ -68,6 +68,7 @@ class atualizarStatusUsuario(APIView):
             return Response({"erro": str(e)}, status=400)
 
 class atualizarUsuario(APIView):
+    permission_classes = [IsAuthenticated, IsAdm]
     def patch(self, request, id):
         try:
             usuario = Usuario.objects.get(id_usuario=id)
@@ -88,4 +89,38 @@ class atualizarUsuario(APIView):
 
         except Usuario.DoesNotExist:
             return Response({"erro": "Usuário não encontrado"}, status=404)
-        
+
+class LoginUsuario(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        senha = request.data.get('senha')
+
+        if not email or not senha:
+            return Response({'erro': 'Email e senha são obrigatórios.'}, status=400)
+
+        try:
+            usuario = Usuario.objects.get(email_usuario=email)
+        except Usuario.DoesNotExist:
+            return Response({'erro': 'Credenciais inválidas.'}, status=401)
+
+        if not check_password(senha, usuario.senha_usuario):
+            return Response({'erro': 'Credenciais inválidas.'}, status=401)
+
+        if usuario.status != 'Ativo':
+            return Response({'erro': 'Usuário inativo.'}, status=403)
+
+        payload = {
+            'id_usuario': str(usuario.id_usuario),
+            'nivel_usuario': usuario.nivel_usuario,
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24),
+            'iat': datetime.datetime.utcnow()
+        }
+
+        token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+
+        return Response({
+            'mensagem': 'Login realizado com sucesso.',
+            'token': token
+        }, status=200)
