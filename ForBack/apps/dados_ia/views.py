@@ -209,7 +209,6 @@ class ConverterArquivo(APIView):
                 f.unlink()
             output_dir.rmdir()
 
-
 class ProcessarProjetoIA(APIView):
     permission_classes = [AllowAny]
 
@@ -283,7 +282,20 @@ class ProcessarProjetoIA(APIView):
                 retorno_ia = executar_agente(dados_json)
             except Exception as e:
                 return Response({"erro": "Falha na execução do agente da IA", "detalhe": str(e)}, status=500)
-            
+
+            relatorio_md = retorno_ia.get("relatorio_md", "")
+            if relatorio_md:
+                try:
+                    nome = f"relatorio_{str(projeto_id)[:8]}.docx"
+                    docx_bytes = gerar_docx_bytes(relatorio_md)
+                    relatorio = RelatorioConformidade(projeto=projeto)
+                    relatorio.arquivo.save(nome, ContentFile(docx_bytes), save=False)
+                    relatorio.nome_arquivo = nome
+                    relatorio.caminho_arquivo = relatorio.arquivo.name
+                    relatorio.save()
+                except Exception as e:
+                    print(f"Erro ao salvar relatório: {e}")
+                        
             response_time = time.time() - start_time
             if response_time > 60:
                 print(f"Alerta: A extração e o processamento (Motor de IA Ollama) demoraram mais do que o normal ({response_time:.2f} s).")
@@ -312,90 +324,49 @@ class ProcessarProjetoIA(APIView):
             traceback.print_exc()
             return Response({"erro": "Falha interna do Motor de Processamento", "detalhe": str(generic_e)}, status=500)
 
-
-class executarAgente(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        projeto_id = request.data.get("projeto_id")
-
-        if not projeto_id:
-            return Response({"erro": "O campo projeto_id é obrigatório."}, status=400)
-
-        try:
-            projeto = Projeto.objects.get(id_projeto = projeto_id)
-        except Projeto.DoesNotExist:
-            return Response({"erro": "Projeto não encontrado"}, status=400)
-        
-        dados_bd = DadosExtraidos.objects.filter(
-            arquivo__projeto=projeto
-        ).last()
-
-        if not dados_bd or not dados_bd.dados:
-            return Response({"erro": "Dados extraídos não encontrados. Envie o arquivo DXF antes de gerar o relatório."}, status=404)
-
-        dados_extracao = dados_bd.dados
-
-        ollama_installer.ensure_ollama_ready()
-
-        try:
-            resultado_ia = executar_agente(dados_extracao)
-            relatorio_md = resultado_ia.get("relatorio_md", "Erro ao processar.")
-        except Exception as e:
-            return Response({"erro": "Falha na execução do agente.", "detalhe": str(e)}, status=500)
-        
-        docx_bytes = gerar_docx_bytes(relatorio_md)
-
-        relatorio = RelatorioConformidade()
-        relatorio.arquivo.save(f"relatorio_{str(projeto_id)[:8]}.docx", ContentFile(docx_bytes))
-        relatorio.save()
-
-        return Response({"mensagem": "Relatório gerado com sucesso!"}, status=200)
-
-class DownloadRelatorio(APIView):
+class StatusRelatorio(APIView):
     def get(self, request):
-        
         projeto_id = request.query_params.get("projeto_id")
 
         if not projeto_id:
             return Response({"erro": "O parâmetro 'projeto_id' é obrigatório"}, status=400)
 
-        nome_arquivo = f"relatorio_{str(projeto_id)[:8]}.docx"
-        relatorio = RelatorioConformidade.objects.filter(
-            arquivo__endswith=nome_arquivo
-        ).last()
+        try:
+            projeto = Projeto.objects.get(id_projeto=projeto_id)
+        except Projeto.DoesNotExist:
+            return Response({"erro": "Projeto não encontrado."}, status=404)
+
+        relatorio = RelatorioConformidade.objects.filter(projeto=projeto).last()
 
         if not relatorio:
-            return Response({"erro": "Nenhum relatório encontrado."}, status=400)
+            return Response({"status": "pendente"})
+        
+        return Response({"status": "concluido"})
+
+
+class DownloadRelatorio(APIView):
+    def get(self, request):
+        projeto_id = request.query_params.get("projeto_id")
+
+        if not projeto_id:
+            return Response({"erro": "O parâmetro 'projeto_id' é obrigatório"}, status=400)
+
+        try:
+            projeto = Projeto.objects.get(id_projeto=projeto_id)
+        except Projeto.DoesNotExist:
+            return Response({"erro": "Projeto não encontrado."}, status=404)
+
+        relatorio = RelatorioConformidade.objects.filter(projeto=projeto).last()
+
+        if not relatorio:
+            return Response({"erro": "Nenhum relatório encontrado."}, status=404)
         
         return FileResponse(
             relatorio.arquivo.open("rb"),
             as_attachment=True,
-            filename=nome_arquivo,
+            filename=relatorio.nome_arquivo,
             content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
-
-class StatusRelatorio(APIView):
-    def get(self, request):
-
-        projeto_id = request.query_params.get("projeto_id")
-
-        if not projeto_id:
-            return Response({"erro": "O parâmetro 'projeto_id' é obrigatório"}, status=400)
-
-        nome_arquivo = f"relatorio_{str(projeto_id)[:8]}.docx"
-        relatorio = RelatorioConformidade.objects.filter(
-            arquivo__endswith=nome_arquivo
-        ).last()
-
-        if not relatorio:
-            return Response({
-                "status": "pendente"
-            })
-        
-        return Response({
-            "status": "concluido"
-        })
 
 class inserirNorma(APIView):
     permission_classes = [AllowAny]
