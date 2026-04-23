@@ -13,6 +13,14 @@ class Usuario(models.Model):
     nivel_usuario = models.CharField(max_length=50)
     status = models.CharField(max_length=20, default='Ativo')
 
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_active(self):
+        return self.status == 'Ativo'
+
     class Meta:
         db_table = "usuarios"
 
