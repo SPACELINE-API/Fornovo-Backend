@@ -16,12 +16,12 @@ class UsuariosConfig(AppConfig):
         from django.contrib.auth.hashers import make_password
         
         try:
-            if not Usuario.objects.filter(nivel_usuario='adm').exists():
+            if not Usuario.objects.filter(email_usuario='adm@email.com').exists():
                 Usuario.objects.create(
-                    nome_usuario='Administrador',
-                    email_usuario='adm',
-                    senha_usuario=make_password('adm'),
-                    nivel_usuario='adm',
+                    nome_usuario='Administrador',  
+                    email_usuario='adm@email.com',
+                    senha_usuario=make_password('adm123'),
+                    nivel_usuario='Administrador',
                     status='Ativo'
                 )
             # Imprime sempre que o servidor inicia e o acesso ao db está ok
