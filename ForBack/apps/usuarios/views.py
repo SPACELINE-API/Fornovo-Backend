@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from apps.usuarios.auth.permissions import IsAdm
+from apps.usuarios.auth.permissions import IsAdm, IsAdmOrProjetista, IsAdmOrRevisor
 from rest_framework.response import Response
 from .models import Usuario
 from django.contrib.auth.hashers import make_password, check_password
@@ -33,12 +33,14 @@ class criarUsuario(APIView):
             return Response({"erro": str(e)}, status=400)
 
 class listarUsuario(APIView):
-    permission_classes = [IsAuthenticated, IsAdm]
+    permission_classes = [IsAuthenticated, IsAdmOrProjetista]
     def get(self, request):
         usuarios = Usuario.objects.all()
 
         data = []
         for u in usuarios:
+            if request.user.nivel_usuario != 'Administrador' and u.nivel_usuario == 'Administrador':
+                continue
             data.append({
                 "id": u.id_usuario,
                 "nome": u.nome_usuario,
@@ -114,6 +116,7 @@ class LoginUsuario(APIView):
         payload = {
             'id_usuario': str(usuario.id_usuario),
             'nivel_usuario': usuario.nivel_usuario,
+            'nome_usuario': usuario.nome_usuario,
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24),
             'iat': datetime.datetime.utcnow()
         }
