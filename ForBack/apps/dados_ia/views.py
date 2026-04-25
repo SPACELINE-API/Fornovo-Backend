@@ -283,6 +283,19 @@ class ProcessarProjetoIA(APIView):
                 retorno_ia = executar_agente(dados_json)
             except Exception as e:
                 return Response({"erro": "Falha na execução do agente da IA", "detalhe": str(e)}, status=500)
+
+            relatorio_md = retorno_ia.get("relatorio_md", "")
+            if relatorio_md:
+                try:
+                    nome = f"relatorio_{str(projeto_id)[:8]}.docx"
+                    docx_bytes = gerar_docx_bytes(relatorio_md)
+                    relatorio = RelatorioConformidade(projeto=projeto)
+                    relatorio.arquivo.save(nome, ContentFile(docx_bytes), save=False)
+                    relatorio.nome_arquivo = nome
+                    relatorio.caminho_arquivo = relatorio.arquivo.name
+                    relatorio.save()
+                except Exception as e:
+                    print(f"Erro ao salvar relatório: {e}")
             
             response_time = time.time() - start_time
             if response_time > 60:
@@ -312,47 +325,50 @@ class ProcessarProjetoIA(APIView):
             traceback.print_exc()
             return Response({"erro": "Falha interna do Motor de Processamento", "detalhe": str(generic_e)}, status=500)
 
+class DownloadRelatorio(APIView):
+    def get(self, request):
+        projeto_id = request.query_params.get("projeto_id")
 
-class executarAgente(APIView):
-    permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser]
-
-    def post(self, request):
-        arquivo = request.FILES.get("arquivo")
-
-        if not arquivo:
-            return Response({"erro": "Nenhum arquivo enviado. Use o campo 'arquivo'."}, status=400)
-
-        if not arquivo.name.lower().endswith(".json"):
-            return Response({"erro": "Formato inválido. Envie um arquivo .json."}, status=400)
+        if not projeto_id:
+            return Response({"erro": "O parâmetro 'projeto_id' é obrigatório"}, status=400)
 
         try:
-            dados_extracao = json.loads(arquivo.read().decode("utf-8"))
-        except Exception as e:
-            return Response({"erro": "Falha ao ler o JSON.", "detalhe": str(e)}, status=400)
+            projeto = Projeto.objects.get(id_projeto=projeto_id)
+        except Projeto.DoesNotExist:
+            return Response({"erro": "Projeto não encontrado."}, status=404)
 
-        ollama_installer.ensure_ollama_ready()
+        relatorio = RelatorioConformidade.objects.filter(projeto=projeto).last()
 
-        try:
-            resultado_ia = executar_agente(dados_extracao)
-            relatorio_md = resultado_ia.get("relatorio_md", "Erro ao processar.")
-        except Exception as e:
-            return Response({"erro": "Falha na execução do agente.", "detalhe": str(e)}, status=500)
+        if not relatorio:
+            return Response({"erro": "Nenhum relatório encontrado."}, status=404)
         
-        docx_bytes = gerar_docx_bytes(relatorio_md)
-
-        relatorio = RelatorioConformidade()
-        relatorio.arquivo.save("relatorio_conformidade.docx", ContentFile(docx_bytes))
-        relatorio.save()
-
-        response = HttpResponse(
-            docx_bytes,
+        return FileResponse(
+            relatorio.arquivo.open("rb"),
+            as_attachment=True,
+            filename=relatorio.nome_arquivo,
             content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
-        response["Content-Disposition"] = 'attachment; filename="relatorio_conformidade.docx"'
-        return response
 
 
+class StatusRelatorio(APIView):
+    def get(self, request):
+        projeto_id = request.query_params.get("projeto_id")
+
+        if not projeto_id:
+            return Response({"erro": "O parâmetro 'projeto_id' é obrigatório"}, status=400)
+
+        try:
+            projeto = Projeto.objects.get(id_projeto=projeto_id)
+        except Projeto.DoesNotExist:
+            return Response({"erro": "Projeto não encontrado."}, status=404)
+
+        relatorio = RelatorioConformidade.objects.filter(projeto=projeto).last()
+
+        if not relatorio:
+            return Response({"status": "pendente"})
+        
+        return Response({"status": "concluido"})
+        
 class inserirNorma(APIView):
     permission_classes = [AllowAny]
     parser_classes = [MultiPartParser]
