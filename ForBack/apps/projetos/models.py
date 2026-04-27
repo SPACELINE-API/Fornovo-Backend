@@ -45,12 +45,6 @@ class Projeto(models.Model):
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 
-    normas = models.ManyToManyField(
-    Norma,
-    through='ProjetoNorma',
-    related_name='projetos'
-)
-
     class Meta:
         db_table = "projetos"
 
@@ -114,11 +108,7 @@ class ProjetoNorma(models.Model):
         db_column="projeto_id"
     )
 
-    norma = models.ForeignKey(
-        Norma,
-        on_delete=models.CASCADE,
-        db_column="norma_id"
-    )
+    norma = models.CharField(max_length=255)
 
     criado_em = models.DateTimeField(auto_now_add=True)
 
