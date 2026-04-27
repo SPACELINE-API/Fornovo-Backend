@@ -4,6 +4,7 @@ import tempfile
 import traceback
 import ctypes
 import pickle
+import re # import de regex pra interpretação do texto do relatório
 from pathlib import Path
 
 from aiohttp import request
@@ -44,6 +45,20 @@ _lock = threading.Lock()
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 MEDIA_PATH = BASE_DIR / "media" / "nbr-pdf"
+
+def ExtrairSalvarNormas(relatorio_md, projeto):
+    try:
+        match = re.search(r'Normas\s*:\s*([^\n]+)', relatorio_md, re.IGNORECASE)
+        if match:
+            normas_encontradas = match.group(1)
+            normas_encontradas = normas_encontradas.replace('*', '').replace('_', '')
+            lista_normas = [n.strip() for n in normas_encontradas.split(',') if n.strip()]
+            
+            from apps.projetos.models import ProjetoNorma
+            for norma_nome in lista_normas:
+                ProjetoNorma.objects.create(projeto=projeto, norma=norma_nome)
+    except Exception as e:
+        print(f"Erro ao extrair e salvar normas: {e}")
 
 class CadastrarDadosExtraidos(APIView):
     permission_classes = [AllowAny]
@@ -299,6 +314,8 @@ class ProcessarProjetoIA(APIView):
                     )
                 except Exception as e:
                     print(f"Erro ao salvar relatório: {e}")
+                    
+                ExtrairSalvarNormas(relatorio_md, projeto)
             
             response_time = time.time() - start_time
             if response_time > 60:
