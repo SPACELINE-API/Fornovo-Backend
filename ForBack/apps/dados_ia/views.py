@@ -289,11 +289,14 @@ class ProcessarProjetoIA(APIView):
                 try:
                     nome = f"relatorio_{str(projeto_id)[:8]}.docx"
                     docx_bytes = gerar_docx_bytes(relatorio_md)
-                    relatorio = RelatorioConformidade(projeto=projeto)
-                    relatorio.arquivo.save(nome, ContentFile(docx_bytes), save=False)
-                    relatorio.nome_arquivo = nome
-                    relatorio.caminho_arquivo = relatorio.arquivo.name
-                    relatorio.save()
+                    hash_arquivo = hashlib.sha256(docx_bytes).hexdigest()
+                    Arquivo.objects.create(
+                        projeto=projeto,
+                        nome_arquivo=nome,
+                        hash_arquivo=hash_arquivo,
+                        tipo_arquivo='docx',
+                        caminho_arquivo=ContentFile(docx_bytes, name=nome)
+                    )
                 except Exception as e:
                     print(f"Erro ao salvar relatório: {e}")
             
@@ -337,13 +340,16 @@ class DownloadRelatorio(APIView):
         except Projeto.DoesNotExist:
             return Response({"erro": "Projeto não encontrado."}, status=404)
 
-        relatorio = RelatorioConformidade.objects.filter(projeto=projeto).last()
+        relatorio = Arquivo.objects.filter(projeto=projeto, tipo_arquivo='docx').last()
 
         if not relatorio:
             return Response({"erro": "Nenhum relatório encontrado."}, status=404)
         
+        if not relatorio.caminho_arquivo:
+            return Response({"erro": "Arquivo físico não encontrado."}, status=404)
+        
         return FileResponse(
-            relatorio.arquivo.open("rb"),
+            relatorio.caminho_arquivo.open("rb"),
             as_attachment=True,
             filename=relatorio.nome_arquivo,
             content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -362,7 +368,7 @@ class StatusRelatorio(APIView):
         except Projeto.DoesNotExist:
             return Response({"erro": "Projeto não encontrado."}, status=404)
 
-        relatorio = RelatorioConformidade.objects.filter(projeto=projeto).last()
+        relatorio = Arquivo.objects.filter(projeto=projeto, tipo_arquivo='docx').last()
 
         if not relatorio:
             return Response({"status": "pendente"})

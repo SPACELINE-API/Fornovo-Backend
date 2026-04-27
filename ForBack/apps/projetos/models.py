@@ -83,6 +83,11 @@ class Projeto(models.Model):
         self.full_clean()
         super().save(*args, **kwargs)
 
+def UploadDeArquivo(instance, filename):
+    if instance.tipo_arquivo in ['xlsx', 'docx']:
+        return f'memorial/{filename}'
+    return f'cad_arquivos/{filename}'
+
 class Arquivo(models.Model):
     id_arquivo = models.AutoField(primary_key=True)
 
@@ -94,7 +99,7 @@ class Arquivo(models.Model):
 
     nome_arquivo = models.CharField(max_length=255)
     hash_arquivo = models.CharField(max_length=255, unique=True)
-    caminho_arquivo = models.FileField(upload_to="cad_arquivos/") #Todos os arquivos vão para /media/cad_arquivos
+    caminho_arquivo = models.FileField(upload_to=UploadDeArquivo) # xlsx/docx para memorial/, o resto para cad_arquivos
     tipo_arquivo = models.CharField(max_length=50)
 
     class Meta:
