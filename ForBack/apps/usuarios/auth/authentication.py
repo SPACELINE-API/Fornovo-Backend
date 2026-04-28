@@ -34,3 +34,7 @@ class CustomJWTAuthentication(BaseAuthentication):
             raise AuthenticationFailed('Usuário inativo.')
 
         return (usuario, token)
+
+
+    def authenticate_header(self, request):
+        return 'Bearer realm="api"'

@@ -221,7 +221,6 @@ class buscarArquivo(APIView): # GET Arquivo
             # pega extensão do arquivo
             extensao = arquivo.nome_arquivo.split(".")[-1].lower()
 
-            # arquivos CAD sempre baixam, pra evitar bugs
             if extensao in ["dwg", "dxf"]:
                 baixar = True
 
