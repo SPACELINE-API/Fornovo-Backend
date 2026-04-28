@@ -20,7 +20,7 @@ import hashlib
 from django.core.files.base import ContentFile
 
 from .models import DadosExtraidos, LogValidacao, DadosInseridosManualmente, RelatorioConformidade
-from apps.projetos.models import Projeto, Norma, Arquivo
+from apps.projetos.models import Projeto, Norma, Arquivo, ProjetoNorma
 from .services import (chroma_normas as agente, oda_installer as oda, extractorDXF as extractor, 
                        ollama_installer)
 from .services.chroma_normas import inserir_norma, apagar_norma
@@ -48,15 +48,21 @@ MEDIA_PATH = BASE_DIR / "media" / "nbr-pdf"
 
 def ExtrairSalvarNormas(relatorio_md, projeto):
     try:
-        match = re.search(r'Normas\s*:\s*([^\n]+)', relatorio_md, re.IGNORECASE)
+        print("Iniciando extração de normas do relatório...")
+        match = re.search(r'Normas[^:]*:\s*([^\n]+)', relatorio_md, re.IGNORECASE)
         if match:
             normas_encontradas = match.group(1)
             normas_encontradas = normas_encontradas.replace('*', '').replace('_', '')
             lista_normas = [n.strip() for n in normas_encontradas.split(',') if n.strip()]
             
+            print(f"Normas encontradas no texto: {lista_normas}")
+            
             from apps.projetos.models import ProjetoNorma
             for norma_nome in lista_normas:
                 ProjetoNorma.objects.create(projeto=projeto, norma=norma_nome)
+                print(f"Norma '{norma_nome}' vinculada com sucesso no banco!")
+        else:
+            print("Normas não encontradas no projeto!")
     except Exception as e:
         print(f"Erro ao extrair e salvar normas: {e}")
 
@@ -290,8 +296,6 @@ class ProcessarProjetoIA(APIView):
                 if output_dir and output_dir.exists():
                     for f in output_dir.iterdir(): f.unlink()
                     output_dir.rmdir()
-
-            normas_projeto = projeto.normas.all()
             
             try:
                 ollama_installer.ensure_ollama_ready()
@@ -302,7 +306,8 @@ class ProcessarProjetoIA(APIView):
             relatorio_md = retorno_ia.get("relatorio_md", "")
             if relatorio_md:
                 try:
-                    nome = f"relatorio_{str(projeto_id)[:8]}.docx"
+                    nome_projeto_limpo = re.sub(r'[^a-zA-Z0-9]+', '_', projeto.nome_projeto).strip('_').lower()
+                    nome = f"relatorio_{nome_projeto_limpo}.docx"
                     docx_bytes = gerar_docx_bytes(relatorio_md)
                     hash_arquivo = hashlib.sha256(docx_bytes).hexdigest()
                     Arquivo.objects.create(
@@ -326,9 +331,10 @@ class ProcessarProjetoIA(APIView):
             insights_bd = []
             for item in retorno_ia.get("insights", []):
                 n_codigo = item.get("norma_codigo", "")
-                norma_obj = normas_projeto.filter(codigo__icontains=n_codigo).first()
-                if not norma_obj and normas_projeto.exists():
-                    norma_obj = normas_projeto.first()
+                # Busca a norma diretamente no banco, pois o projeto não tem mais a relação M2M direta
+                norma_obj = Norma.objects.filter(codigo__icontains=n_codigo).first()
+                if not norma_obj:
+                    norma_obj = Norma.objects.first()
                     
                 if norma_obj:
                     log = LogValidacao.objects.create(projeto=projeto, norma=norma_obj, dados=item)
