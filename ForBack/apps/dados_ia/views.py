@@ -368,6 +368,7 @@ class StatusRelatorio(APIView):
             return Response({"status": "pendente"})
         
         return Response({"status": "concluido"})
+
         
 class inserirNorma(APIView):
     permission_classes = [AllowAny]
