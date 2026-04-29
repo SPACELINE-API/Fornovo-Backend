@@ -572,54 +572,6 @@ class ExtrairDadosDXFAPIView(APIView):
             print(traceback.format_exc())
             return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-class DebugEletricaView(APIView):
-    parser_classes = [MultiPartParser]
-
-    def post(self, request, *args, **kwargs):
-        try:
-            dxf_file = request.FILES.get("dxf")
-            if not dxf_file:
-                return Response({"erro": "Envie o JSON do DXF no campo 'dxf'."}, status=400)
-            dados = json.loads(dxf_file.read().decode("utf-8"))
-
-            from .services.memorial.levantamento_campo import _extrair_dxf_por_ambiente, _extrair_ambientes_super
-
-            entidades = dados.get("entidades", [])
-            textos = dados.get("textos", []) or [e for e in entidades if e.get("tipo") in ("MTEXT", "TEXT")]
-            blocos = dados.get("blocos", [])
-            ambientes = _extrair_ambientes_super(textos)
-            ambientes = [a for a in ambientes if a.get("area", 0) > 0]
-
-            dxf_por_amb = _extrair_dxf_por_ambiente(entidades, textos, blocos, ambientes)
-
-            saida = []
-            for amb in ambientes:
-                nome = amb.get("nome", "")
-                dxf = dxf_por_amb.get(nome, {})
-                ele = dxf.get("eletrica", {})
-                saida.append({
-                    "ambiente": nome,
-                    "area_m2": amb.get("area"),
-                    "quadros": ele.get("quadros"),
-                    "conduletes": ele.get("conduletes"),
-                    "tomadas": ele.get("tomadas"),
-                    "interruptores": ele.get("interruptores"),
-                    "luminarias": ele.get("luminarias"),
-                    "dutos_m": ele.get("dutos_m"),
-                    "cabos_m": ele.get("cabos_m"),
-                })
-
-            for s in saida:
-                print(f"AMBIENTE: {s['ambiente']} | area={s['area_m2']}m² | quadros={s['quadros']} | conduletes={s['conduletes']} | tomadas={s['tomadas']} | interruptores={s['interruptores']} | luminarias={s['luminarias']} | dutos={s['dutos_m']}m | cabos={s['cabos_m']}m")
-
-            return Response({"ambientes": saida, "total": len(saida)})
-
-        except Exception as e:
-            import traceback
-            print(traceback.format_exc())
-            return Response({"erro": str(e)}, status=500)
-
 class MemorialCalculo(APIView):
     parser_classes = [MultiPartParser, JSONParser]
 
@@ -676,41 +628,6 @@ class MemorialCalculo(APIView):
         except Exception as e:
             print(traceback.format_exc())
             return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-class GerarPlanilhaMovimentoSolo(APIView):
-    parser_classes = [MultiPartParser] 
-
-    def post(self, request, *args, **kwargs):
-        try:
-            arquivo = request.FILES.get("arquivo")
-            
-            if arquivo:
-                dados = json.loads(arquivo.read().decode("utf-8"))
-            else:
-                dados = request.data
-                
-            if not dados:
-                return Response({"erro": "Nenhum dado ou arquivo JSON fornecido."}, status=status.HTTP_400_BAD_REQUEST)
-            
-            arquivo_bytes = extrair_movimento_solo(dados)
-            
-            if not arquivo_bytes:
-                return Response({"erro": "Falha na geração do arquivo Excel em memória."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
-            response = HttpResponse(
-                arquivo_bytes,
-                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-            
-            # Altera o nome do ficheiro de saída
-            response["Content-Disposition"] = 'attachment; filename="movimento_solo.xlsx"'
-            
-            return response
-            
-        except Exception as e:
-            print(traceback.format_exc())
-            return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 class SalvarMemorialCalculo(APIView):
     """
