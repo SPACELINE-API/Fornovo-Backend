@@ -3,20 +3,6 @@ import json
 from django.db import models
 from apps.projetos.models import Projeto, Norma, Arquivo
 
-# Create your models here.
-
-'''
-Descrição do problema:
-Modelar e implementar as tabelas de banco de dados específicas para o módulo de Inteligência Artificial.
-
-O que deve ser feito:
-- Criar todas as tabelas necessárias para a funcionalidade da IA.
-- Vincular cada elemento extraído ao arquivo CAD de origem para garantir a rastreabilidade.
-- Adicionar índices nos campos de id do projeto para acelerar a recuperação dos dados durante a geração do memorial.
-'''
-
-
-
 class DadosExtraidos(models.Model):
     """
     Objetivo: Armazenar o resultado da extração pesada de coordenadas e geometrias.
