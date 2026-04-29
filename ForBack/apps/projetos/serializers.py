@@ -17,7 +17,7 @@ class ProjetoSerializer(serializers.ModelSerializer):
         model = Projeto
         fields = [
             'id_projeto', 'nome_projeto', 'descricao', 'cliente', 
-            'localizacao', 'status', 'data_inicio', 'data_fim', 
+            'cep', 'localizacao', 'status', 'data_inicio', 'data_fim', 
             'engenheiro', 'engenheiro_nome', 'engenheiro_nivel'
         ]
 
