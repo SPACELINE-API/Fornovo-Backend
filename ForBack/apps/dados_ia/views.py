@@ -28,17 +28,10 @@ from .services.ollama_execute import executar_agente
 import json
 from django.http import HttpResponse
 import threading
-from .services.memorial.levantamento_campo import extrair_levantamento_campo_para_xlsx, mesclar_form_com_dxf
 from rest_framework import status
 from django.http import FileResponse
 
-from .services import oda_installer as oda, extractorDXF as extractor
-from .services import ollama_installer
-from .services.ollama_execute import executar_agente
 from .services.chroma_normas import inserir_norma
-from .services.memorial.serviços_preliminares import extrair_servicos_preliminares_para_xlsx
-from .services.memorial.memorial_calculo import extrair_memorial_calculo
-from .services.memorial.movimento_solo import extrair_movimento_solo
 from .utils.relatorio import gerar_docx_bytes
 
 _lock = threading.Lock()
@@ -556,88 +549,6 @@ class ativarNorma(APIView):
             }, status=500)
 
 
-
-
-class GerarPlanilhaEletrica(APIView):
-    permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser]
-
-    def post(self, request):
-        arquivo = request.FILES.get("arquivo")
-
-        if not arquivo:
-            return Response({"erro": "Nenhum arquivo enviado. Use o campo 'arquivo'."}, status=400)
-
-        if not arquivo.name.lower().endswith(".json"):
-            return Response({"erro": "Formato inválido. Envie um arquivo .json."}, status=400)
-
-        try:
-            dados_extracao = json.loads(arquivo.read().decode("utf-8"))
-        except Exception as e:
-            return Response({"erro": "Falha ao ler o JSON.", "detalhe": str(e)}, status=400)
-
-        try:
-            caminho_csv = p.extrair_dados_eletricos_para_csv(dados_extracao)
-        except Exception as e:
-            return Response({"erro": "Falha ao processar os dados elétricos.", "detalhe": str(e)}, status=500)
-
-        try:
-            with open(caminho_csv, 'rb') as f:
-                response = HttpResponse(f.read(), content_type="text/csv; charset=utf-8")
-                nome_arquivo_download = os.path.basename(caminho_csv)
-                response["Content-Disposition"] = f'attachment; filename="{nome_arquivo_download}"'
-                            
-            return response
-
-        except Exception as e:
-            return Response({"erro": "Falha ao disponibilizar o arquivo para download.", "detalhe": str(e)}, status=500)
-
-class GerarPlanilhaLevantamentoAPIView(APIView):
-    parser_classes = [MultiPartParser]
-
-    def _parse_json_field(self, request, key):
-        arquivo = request.FILES.get(key)
-        if arquivo:
-            return json.loads(arquivo.read().decode("utf-8"))
-        valor = request.data.get(key)
-        if valor:
-            if isinstance(valor, str):
-                return json.loads(valor)
-            return valor
-        return None
-
-    def post(self, request, *args, **kwargs):
-        try:
-            dados_arquivo = self._parse_json_field(request, "arquivo")
-            dados_dxf = self._parse_json_field(request, "dxf")
-
-            if not dados_arquivo:
-                return Response({"erro": "Envie o JSON manual no campo 'arquivo'."}, status=status.HTTP_400_BAD_REQUEST)
-            if not dados_dxf:
-                return Response({"erro": "Envie o JSON do DXF no campo 'dxf'."}, status=status.HTTP_400_BAD_REQUEST)
-
-            dados_mesclados = mesclar_form_com_dxf(dados_arquivo, dados_dxf)
-
-            arquivo_bytes = extrair_levantamento_campo_para_xlsx(dados_mesclados)
-            if not arquivo_bytes:
-                return Response({"erro": "Falha na geração do arquivo Excel em memória."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-            response = HttpResponse(
-                arquivo_bytes,
-                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-            response["Content-Disposition"] = 'attachment; filename="levantamento_campo_unificado.xlsx"'
-            return response
-
-        except json.JSONDecodeError as e:
-            return Response({"erro": "JSON inválido.", "detalhe": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        except Exception as e:
-            import traceback
-            print(traceback.format_exc())
-            return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 class ExtrairDadosDXFAPIView(APIView):
     parser_classes = [MultiPartParser]
 
@@ -708,40 +619,6 @@ class DebugEletricaView(APIView):
             import traceback
             print(traceback.format_exc())
             return Response({"erro": str(e)}, status=500)
-
-
-class GerarPlanilhaServicosPreliminaresAPIView(APIView):
-    parser_classes = [MultiPartParser] 
-
-    def post(self, request, *args, **kwargs):
-        try:
-            arquivo = request.FILES.get("arquivo")
-            
-            if arquivo:
-                dados = json.loads(arquivo.read().decode("utf-8"))
-            else:
-                dados = request.data
-                
-            if not dados:
-                return Response({"erro": "Nenhum dado ou arquivo JSON fornecido."}, status=status.HTTP_400_BAD_REQUEST)
-            
-            arquivo_bytes = extrair_servicos_preliminares_para_xlsx(dados)
-            
-            if not arquivo_bytes:
-                return Response({"erro": "Falha na geração do arquivo Excel em memória."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
-            response = HttpResponse(
-                arquivo_bytes,
-                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-            response["Content-Disposition"] = 'attachment; filename="servicos_preliminares.xlsx"'
-            
-            return response
-            
-        except Exception as e:
-            import traceback
-            print(traceback.format_exc())
-            return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class MemorialCalculo(APIView):
     parser_classes = [MultiPartParser, JSONParser]
