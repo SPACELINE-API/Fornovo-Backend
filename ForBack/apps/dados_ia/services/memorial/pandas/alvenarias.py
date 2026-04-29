@@ -201,6 +201,7 @@ TERMOS_IGNORAR = [
     "CONECTOR",
 ]
 
+
 def limpar_texto(txt):
     txt = re.sub(r"XQC;|\\P|\\C|#|{|}|\d+.*", "", txt)
     txt = txt.replace(";", "").replace("-", "").strip()
@@ -209,7 +210,7 @@ def limpar_texto(txt):
     return txt if txt else None
 
 
-def alvenarias(json_path, dxf_path):
+def alvenarias(dados_manuais, dados_automaticos):
     df = pd.DataFrame(columns=colunas_alvenarias)
     df2 = pd.DataFrame(columns=colunas_alvenarias2)
     df3 = pd.DataFrame(columns=colunas_alvenarias3)
@@ -220,12 +221,6 @@ def alvenarias(json_path, dxf_path):
     df8 = pd.DataFrame(columns=colunas_alvenarias8)
     df9 = pd.DataFrame(columns=colunas_alvenarias9)
     df10 = pd.DataFrame(columns=colunas_alvenarias10)
-
-    with open(json_path, "r", encoding="utf-8") as m:
-        dados_manuais = json.load(m)
-
-    with open(dxf_path, "r", encoding="utf-8") as a:
-        dados_automaticos = json.load(a)
 
     ambientes_ref = []
 
@@ -1119,17 +1114,16 @@ def alvenarias(json_path, dxf_path):
         df10.loc[_idx, ("Pisos", "h")] = ""
         df10.loc[_idx, ("Pisos", "Per")] = _per4
         df10.loc[_idx, ("Pisos", "A_tot")] = _A4
-    
+
     def garantir_minimo_linhas(df, colunas, n=10):
         if df.empty:
             df = pd.DataFrame([{col: None for col in colunas} for _ in range(n)])
             df.columns = [
-                col[1] if col[0] == "" else f"{col[0]} {col[1]}"
-                for col in df.columns
+                col[1] if col[0] == "" else f"{col[0]} {col[1]}" for col in df.columns
             ]
 
         return df
-    
+
     df = garantir_minimo_linhas(df, colunas_alvenarias)
     df2 = garantir_minimo_linhas(df2, colunas_alvenarias2)
     df3 = garantir_minimo_linhas(df3, colunas_alvenarias3)
@@ -1140,19 +1134,18 @@ def alvenarias(json_path, dxf_path):
     df8 = garantir_minimo_linhas(df8, colunas_alvenarias8)
     df9 = garantir_minimo_linhas(df9, colunas_alvenarias9)
     df10 = garantir_minimo_linhas(df10, colunas_alvenarias10)
-    
+
     tabela_map = {
-        "4.1 Painéis": (df, colunas_alvenarias, "alvenaria"),
-        "4.2 Vergas e Contra Vergas": (df2, colunas_alvenarias2, "alvenaria"),
-        "4.3 Guias, Calçadas e Passeios": (df3, colunas_alvenarias3, "alvenaria"),
-        "4.4 Rampas, Patamares e Passarelas": (df4, colunas_alvenarias4, "alvenaria"),
-        "4.5 Pavimentos": (df5, colunas_alvenarias5, "alvenaria"),
-        "4.6 Cercamentos": (df6, colunas_alvenarias6, "alvenaria"),
-        "4.7 Regularização de Superfícies Verticais": (df7, colunas_alvenarias7, "alvenaria"),
-        "4.8 Regularização de Superfícies Horizontais": (df8, colunas_alvenarias8, "alvenaria"),
-        "4.9 Juntas de Dilatação": (df9, colunas_alvenarias9, "alvenaria"),
-        "4.10 Impermeabilização": (df10, colunas_alvenarias10, "alvenaria"),
+        "4.1 Painéis": df,
+        "4.2 Vergas e Contra Vergas": df2,
+        "4.3 Guias, Calçadas e Passeios": df3,
+        "4.4 Rampas, Patamares e Passarelas": df4,
+        "4.5 Pavimentos": df5,
+        "4.6 Cercamentos": df6,
+        "4.7 Regularização de Superfícies Verticais": df7,
+        "4.8 Regularização de Superfícies Horizontais": df8,
+        "4.9 Juntas de Dilatação": df9,
+        "4.10 Impermeabilização": df10,
     }
 
     return tabela_map
-

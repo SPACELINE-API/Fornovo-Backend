@@ -42,18 +42,15 @@ HEADER_SPLIT = {
     "V [m³]": ("V", "[m³]"),
 }
 
-def movimento_solo(json_path, dxf_path):
+
+def movimento_solo(dados_manuais, dados_automaticos):
+    
     df_escavacao = pd.DataFrame(columns=colunas_movimento_solo_escavacoes)
     df_aterro = pd.DataFrame(columns=colunas_movimento_solo)
     df_enrocamento = pd.DataFrame(columns=colunas_movimento_solo)
     df_contencao = pd.DataFrame(columns=colunas_movimento_solo)
     df_taludamento = pd.DataFrame(columns=colunas_movimento_solo)
     df_nivelamento = pd.DataFrame(columns=colunas_movimento_solo)
-
-    with open(json_path, "r", encoding="utf-8") as f:
-        dados_manuais = json.load(f)
-    with open(dxf_path, "r", encoding="utf-8") as a:
-        dados_automaticos = json.load(a)
 
     amb_manuais = dados_manuais.get("ambientes", [])
     for item in amb_manuais:
@@ -217,7 +214,7 @@ def movimento_solo(json_path, dxf_path):
         nome_norm = normalizar_nome(nome)
 
         if nome_norm in ambientes_unicos:
-            continue  
+            continue
 
         ambientes_unicos.add(nome_norm)
 
@@ -236,23 +233,14 @@ def movimento_solo(json_path, dxf_path):
         "2.6 Taludamentos",
         "2.7 Nivelamentos e Compactações",
     ]
+
     tabela_map = {
-        "2.2 Escavações": (
-            df_escavacao,
-            colunas_movimento_solo_escavacoes,
-            "escavacao",
-        ),
-        "2.3 Aterros e Reaterros": (df_aterro, colunas_movimento_solo, "aterro"),
-        "2.4 Enrocamentos": (df_enrocamento, colunas_movimento_solo, "aterro"),
-        "2.5 Contenções": (df_contencao, colunas_movimento_solo, "aterro"),
-        "2.6 Taludamentos": (df_taludamento, colunas_movimento_solo, "aterro"),
-        "2.7 Nivelamentos e Compactações": (
-            df_nivelamento,
-            colunas_movimento_solo,
-            "aterro",
-        ),
+        "2.2 Escavações": df_escavacao,
+        "2.3 Aterros e Reaterros": df_aterro,
+        "2.4 Enrocamentos": df_enrocamento,
+        "2.5 Contenções": df_contencao,
+        "2.6 Taludamentos": df_taludamento,
+        "2.7 Nivelamentos e Compactações": df_nivelamento,
     }
 
-    
     return tabela_map
-

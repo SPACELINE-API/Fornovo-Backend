@@ -140,7 +140,7 @@ colunas_levantamento_campo7 = pd.MultiIndex.from_tuples(
 )
 
 
-def levantamento_campo(json_path, dxf_path):
+def levantamento_campo(dados_manuais, dados_automaticos):
     df = pd.DataFrame(columns=colunas_levantamento_campo)
     df2 = pd.DataFrame(columns=colunas_levantamento_campo2)
     df3 = pd.DataFrame(columns=colunas_levantamento_campo3)
@@ -148,12 +148,6 @@ def levantamento_campo(json_path, dxf_path):
     df5 = pd.DataFrame(columns=colunas_levantamento_campo5)
     df6 = pd.DataFrame(columns=colunas_levantamento_campo6)
     df7 = pd.DataFrame(columns=colunas_levantamento_campo7)
-
-    with open(json_path, "r", encoding="utf-8") as m:
-        dados_manuais = json.load(m)
-
-    with open(dxf_path, "r", encoding="utf-8") as a:
-        dados_automaticos = json.load(a)
 
     idx_linha = 0
 

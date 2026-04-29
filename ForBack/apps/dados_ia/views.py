@@ -34,6 +34,8 @@ from django.http import FileResponse
 from .services.chroma_normas import inserir_norma
 from .utils.relatorio import gerar_docx_bytes
 
+from apps.dados_ia.services.memorial.pandas.builder import gerar_memorial
+
 _lock = threading.Lock()
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -609,10 +611,9 @@ class MemorialCalculo(APIView):
             if not dados_dxf:
                 return Response({"erro": "Envie o JSON do DXF no campo 'dxf'."}, status=status.HTTP_400_BAD_REQUEST)
 
-            dados_mesclados = mesclar_form_com_dxf(dados_arquivo, dados_dxf)
+            arquivo = gerar_memorial(dados_arquivo, dados_dxf)
 
-            arquivo_bytes = extrair_memorial_calculo(dados_mesclados)
-            if not arquivo_bytes:
+            if not arquivo:
                 return Response({"erro": "Falha na geração do arquivo Excel em memória."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             response = HttpResponse(
@@ -648,7 +649,6 @@ class SalvarMemorialCalculo(APIView):
 
     def post(self, request, *args, **kwargs):
         try:
-            # 1. Buscar o projeto_id do corpo da requisição (POST)
             projeto_id = request.data.get("projeto_id")
             if not projeto_id:
                 return Response({"erro": "O campo 'projeto_id' é obrigatório."}, status=status.HTTP_400_BAD_REQUEST)
@@ -658,29 +658,25 @@ class SalvarMemorialCalculo(APIView):
             except Projeto.DoesNotExist:
                 return Response({"erro": "Projeto não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-            # 2. Parsear os dados (DXF e Manual)
             dados_arquivo = self._parse_json_field(request, "arquivo")
             dados_dxf = self._parse_json_field(request, "dxf")
 
             if not dados_arquivo:
                 return Response({"erro": "Envie o JSON manual no campo 'arquivo'."}, status=status.HTTP_400_BAD_REQUEST)
+
             if not dados_dxf:
                 return Response({"erro": "Envie o JSON do DXF no campo 'dxf'."}, status=status.HTTP_400_BAD_REQUEST)
 
-            # 3. Gerar o conteúdo do Excel
-            dados_mesclados = mesclar_form_com_dxf(dados_arquivo, dados_dxf)
-            arquivo_bytes = extrair_memorial_calculo(dados_mesclados)
-            
-            if not arquivo_bytes:
+            arquivo = gerar_memorial(dados_arquivo, dados_dxf)
+
+            if not arquivo:
                 return Response({"erro": "Falha na geração do arquivo Excel."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-            # 4. Salvar no banco de dados (Model Arquivo)
+            arquivo.seek(0)
+            arquivo_bytes = arquivo.getvalue()
+
             nome_arquivo = f"memorial_calculo_{projeto_id[:8]}.xlsx"
             hash_arquivo = hashlib.sha256(arquivo_bytes).hexdigest()
-
-            # Verificar se já existe um arquivo com esse hash para este projeto (opcional)
-            # if Arquivo.objects.filter(projeto=projeto, hash_arquivo=hash_arquivo).exists():
-            #     return Response({"mensagem": "Este memorial já foi salvo anteriormente.", "status": "existente"}, status=200)
 
             novo_arquivo = Arquivo.objects.create(
                 projeto=projeto,
@@ -705,28 +701,19 @@ class SalvarMemorialCalculo(APIView):
             return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def get(self, request, *args, **kwargs):
-        """
-        Rota GET para recuperar o memorial de cálculo (XLSX) salvo para um projeto.
-        O projeto_id deve ser passado via query parameter: ?projeto_id=...
-        """
         try:
-            # 1. Buscar o projeto_id dos query parameters
             projeto_id = request.query_params.get("projeto_id")
             if not projeto_id:
                 return Response({"erro": "O parâmetro 'projeto_id' é obrigatório na URL (query string)."}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Buscar o arquivo do tipo xlsx para o projeto
             arquivo = Arquivo.objects.filter(projeto_id=projeto_id, tipo_arquivo='xlsx').last()
 
             if not arquivo:
-                return Response({
-                    "erro": "Nenhum memorial de cálculo salvo para este projeto."
-                }, status=status.HTTP_404_NOT_FOUND)
+                return Response({"erro": "Nenhum memorial de cálculo salvo para este projeto."}, status=status.HTTP_404_NOT_FOUND)
 
             if not arquivo.caminho_arquivo:
                 return Response({"erro": "Arquivo físico não encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-            # 2. Retornar o arquivo para download
             return FileResponse(
                 arquivo.caminho_arquivo.open("rb"),
                 as_attachment=True,

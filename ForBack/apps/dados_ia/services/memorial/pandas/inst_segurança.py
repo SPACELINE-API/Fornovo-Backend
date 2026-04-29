@@ -63,20 +63,28 @@ colunas_seguranca1 = pd.MultiIndex.from_tuples(
     ]
 )
 
-def seguranca(dxf_path):
+
+def seguranca(dados_automaticos):
     df = pd.DataFrame(columns=colunas_seguranca)
     df1 = pd.DataFrame(columns=colunas_seguranca1)
-
-    with open(dxf_path, "r", encoding="utf-8") as a:
-        dados_automaticos = json.load(a)
 
     _txts_all = dados_automaticos.get("textos", [])
     _ents_all = dados_automaticos.get("entidades", [])
 
     _ambientes = []
     for _txt in _txts_all:
-        _c_limpo = re.sub(r"\\[^;\\]+;", "", _txt.get("conteudo", "")).replace("{", "").replace("}", "").replace(r"\P", " ").strip()
-        if "m²" in _c_limpo.lower() and "mm" not in _c_limpo.lower() and _txt.get("posicao"):
+        _c_limpo = (
+            re.sub(r"\\[^;\\]+;", "", _txt.get("conteudo", ""))
+            .replace("{", "")
+            .replace("}", "")
+            .replace(r"\P", " ")
+            .strip()
+        )
+        if (
+            "m²" in _c_limpo.lower()
+            and "mm" not in _c_limpo.lower()
+            and _txt.get("posicao")
+        ):
             _nome = re.sub(r"\d+[.,]\d+\s*m²", "", _c_limpo, flags=re.IGNORECASE)
             _nome = re.sub(r"P\s*=\s*\d+[.,]\d+\s*M", "", _nome, flags=re.IGNORECASE)
             _nome = re.sub(r"PD\s*=\s*\d+[.,]\d+\s*M", "", _nome, flags=re.IGNORECASE)
@@ -87,7 +95,9 @@ def seguranca(dxf_path):
     def _get_amb(cx, cy, limite=6000):
         if not _ambientes:
             return "GERAL"
-        _mais_prox = min(_ambientes, key=lambda a: math.hypot(cx - a["pos"][0], cy - a["pos"][1]))
+        _mais_prox = min(
+            _ambientes, key=lambda a: math.hypot(cx - a["pos"][0], cy - a["pos"][1])
+        )
         if math.hypot(cx - _mais_prox["pos"][0], cy - _mais_prox["pos"][1]) > limite:
             return "GERAL"
         return _mais_prox["nome"]
@@ -120,7 +130,9 @@ def seguranca(dxf_path):
                 elif "MALHA TERRA" in _layer:
                     _spda_dados[_amb][("Equalização", "", "Cordoalha")] += _comp
                 elif "CONTRA INCÊNDIO" in _layer:
-                    _incendio_dados[_amb][("Hidrantes", "Duto de Contra Incêndio", "C [m]")] += _comp
+                    _incendio_dados[_amb][
+                        ("Hidrantes", "Duto de Contra Incêndio", "C [m]")
+                    ] += _comp
 
         if "FIXADOR GELCAM" in _layer:
             _spda_dados[_amb][("Captação", "", "Fixação")] += 1
@@ -133,7 +145,12 @@ def seguranca(dxf_path):
 
     for t in _txts_all:
         _c_original = t.get("conteudo", "")
-        _c_limpo = re.sub(r"\\[^;\\]+;", "", _c_original).replace("{", "").replace("}", "").replace(r"\P", " ")
+        _c_limpo = (
+            re.sub(r"\\[^;\\]+;", "", _c_original)
+            .replace("{", "")
+            .replace("}", "")
+            .replace(r"\P", " ")
+        )
         _c_upper = _c_limpo.upper()
         _cx, _cy = t.get("posicao", [0, 0, 0])[:2]
         _amb = _get_amb(_cx, _cy)
@@ -152,7 +169,9 @@ def seguranca(dxf_path):
 
             _extintores[_amb].append({"tipo": _tipo_ext, "peso": _peso_ext})
 
-    all_ambs = set(_spda_dados.keys()) | set(_incendio_dados.keys()) | set(_extintores.keys())
+    all_ambs = (
+        set(_spda_dados.keys()) | set(_incendio_dados.keys()) | set(_extintores.keys())
+    )
     if not all_ambs:
         all_ambs.add("GERAL")
 
@@ -160,14 +179,30 @@ def seguranca(dxf_path):
         idx = len(df)
         df.loc[idx, ("", "", "Ambiente")] = amb
 
-        df.loc[idx, ("Captação", "", "Barra [m]")] = round(_spda_dados[amb][("Captação", "", "Barra [m]")], 2)
-        df.loc[idx, ("Captação", "", "Cordoalha [m]")] = round(_spda_dados[amb][("Captação", "", "Cordoalha [m]")], 2)
-        df.loc[idx, ("Captação", "", "Duto [m]")] = round(_spda_dados[amb][("Captação", "", "Duto [m]")], 2)
-        df.loc[idx, ("Captação", "", "Terminal Compressão")] = math.ceil(_spda_dados[amb][("Captação", "", "Terminal Compressão")])
-        df.loc[idx, ("Captação", "", "Fixação")] = math.ceil(_spda_dados[amb][("Captação", "", "Fixação")])
-        df.loc[idx, ("Equalização", "", "Cordoalha")] = round(_spda_dados[amb][("Equalização", "", "Cordoalha")], 2)
-        df.loc[idx, ("Aterramento", "Haste", "Qnt")] = math.ceil(_spda_dados[amb][("Aterramento", "Haste", "Qnt")])
-        df.loc[idx, ("Aterramento", "Caixa Inspeção", "Qnt")] = math.ceil(_spda_dados[amb][("Aterramento", "Caixa Inspeção", "Qnt")])
+        df.loc[idx, ("Captação", "", "Barra [m]")] = round(
+            _spda_dados[amb][("Captação", "", "Barra [m]")], 2
+        )
+        df.loc[idx, ("Captação", "", "Cordoalha [m]")] = round(
+            _spda_dados[amb][("Captação", "", "Cordoalha [m]")], 2
+        )
+        df.loc[idx, ("Captação", "", "Duto [m]")] = round(
+            _spda_dados[amb][("Captação", "", "Duto [m]")], 2
+        )
+        df.loc[idx, ("Captação", "", "Terminal Compressão")] = math.ceil(
+            _spda_dados[amb][("Captação", "", "Terminal Compressão")]
+        )
+        df.loc[idx, ("Captação", "", "Fixação")] = math.ceil(
+            _spda_dados[amb][("Captação", "", "Fixação")]
+        )
+        df.loc[idx, ("Equalização", "", "Cordoalha")] = round(
+            _spda_dados[amb][("Equalização", "", "Cordoalha")], 2
+        )
+        df.loc[idx, ("Aterramento", "Haste", "Qnt")] = math.ceil(
+            _spda_dados[amb][("Aterramento", "Haste", "Qnt")]
+        )
+        df.loc[idx, ("Aterramento", "Caixa Inspeção", "Qnt")] = math.ceil(
+            _spda_dados[amb][("Aterramento", "Caixa Inspeção", "Qnt")]
+        )
 
         idx1 = len(df1)
         df1.loc[idx1, ("", "", "Ambiente")] = amb
@@ -176,9 +211,13 @@ def seguranca(dxf_path):
         if ext_list:
             df1.loc[idx1, ("", "Extintores Portáteis", "Local")] = "Piso/Parede"
             df1.loc[idx1, ("", "Extintores Portáteis", "Tipo")] = ext_list[0]["tipo"]
-            df1.loc[idx1, ("", "Extintores Portáteis", "Peso [KgF]")] = ext_list[0]["peso"]
+            df1.loc[idx1, ("", "Extintores Portáteis", "Peso [KgF]")] = ext_list[0][
+                "peso"
+            ]
             df1.loc[idx1, ("", "Extintores Portáteis", "Qnt")] = len(ext_list)
 
-        df1.loc[idx1, ("Hidrantes", "Duto de Contra Incêndio", "C [m]")] = round(_incendio_dados[amb][("Hidrantes", "Duto de Contra Incêndio", "C [m]")], 2)
+        df1.loc[idx1, ("Hidrantes", "Duto de Contra Incêndio", "C [m]")] = round(
+            _incendio_dados[amb][("Hidrantes", "Duto de Contra Incêndio", "C [m]")], 2
+        )
 
     return df, df1
