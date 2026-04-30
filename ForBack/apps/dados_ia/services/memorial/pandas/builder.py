@@ -115,7 +115,11 @@ def exportar_tabelas(mapa_abas, destino):
 
     writer.close()
 
-def gerar_memorial(path_man, path_cad):
+def gerar_memorial(path_man, path_cad):   
+     
+    if isinstance(path_man, dict) and "ambientes" not in path_man: path_man = {"ambientes": [path_man]}
+
+
     dfs_levantamento = list(levantamento_campo(path_man, path_cad))
     df_servicos = list(servicos_preliminares(path_man, path_cad))
     tabela_map_solo = movimento_solo(path_man, path_cad)
