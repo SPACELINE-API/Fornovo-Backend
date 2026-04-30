@@ -16,10 +16,7 @@ from .movimentosolo_manual import movimento_solo
 from .inst_telefonia import telefonia
 
 def exportar_tabelas(mapa_abas, destino):
-    print("\n" + "="*50)
-    print("INICIANDO EXPORTAÇÃO PARA EXCEL")
-    print("="*50)
-    
+
     writer = pd.ExcelWriter(destino, engine='xlsxwriter')
     workbook = writer.book
     
@@ -32,7 +29,6 @@ def exportar_tabelas(mapa_abas, destino):
     s_col_ini = 1 
 
     for nome_aba, conteudo in mapa_abas.items():
-        print(f"\n[ABA] Criando aba: '{nome_aba}'")
         aba_limpa = nome_aba[:31]
         worksheet = workbook.add_worksheet(aba_limpa)
         writer.sheets[aba_limpa] = worksheet
@@ -42,14 +38,12 @@ def exportar_tabelas(mapa_abas, destino):
         itens = []
 
         if isinstance(conteudo, dict):
-            print(f"  -> Conteúdo é DICIONÁRIO ({len(conteudo)} chaves)")
             for titulo, valor in conteudo.items():
                 if isinstance(valor, (list, tuple)):
                     itens.append((titulo, valor[0]))
                 else:
                     itens.append((titulo, valor))
         elif isinstance(conteudo, list):
-            print(f"  -> Conteúdo é LISTA ({len(conteudo)} itens)")
             for i, item in enumerate(conteudo):
                 if isinstance(item, tuple):
                     if len(item) >= 2:
@@ -59,21 +53,15 @@ def exportar_tabelas(mapa_abas, destino):
                 else:
                     itens.append((None, item))
         else:
-            print(f"  -> Conteúdo é OBJETO ÚNICO ({type(conteudo)})")
             itens = [(None, conteudo)]
 
         for i, (titulo, df) in enumerate(itens):
-            print(f"    [TABELA {i+1}] Título: '{titulo}' | Tipo: {type(df)}")
             
             if not isinstance(df, pd.DataFrame):
-                print(f"    ⚠️ AVISO: Item ignorado pois não é um DataFrame (é {type(df)})")
                 continue
             
             if df.empty:
-                print(f"    ℹ️ INFO: DataFrame vazio, pulando...")
                 continue
-
-            print(f"    ✅ Processando DataFrame: {df.shape[0]} linhas x {df.shape[1]} colunas")
 
             if titulo:
                 worksheet.write(current_row, s_col_ini, titulo, fmt_titulo_secao)
@@ -126,9 +114,6 @@ def exportar_tabelas(mapa_abas, destino):
             current_row = start_data + n_rows + 3
 
     writer.close()
-    print("\n" + "="*50)
-    print("ARQUIVO EXCEL GERADO COM SUCESSO")
-    print("="*50)
 
 def gerar_memorial(path_man, path_cad):
     dfs_levantamento = list(levantamento_campo(path_man, path_cad))
