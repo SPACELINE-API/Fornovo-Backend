@@ -20,9 +20,9 @@ def exportar_tabelas(mapa_abas, destino):
     writer = pd.ExcelWriter(destino, engine='xlsxwriter')
     workbook = writer.book
     
-    fmt_nome_sheet = workbook.add_format({'bold': True, 'font_size': 16, 'font_color': '#2F5597'})
+    fmt_nome_sheet = workbook.add_format({'bold': True, 'font_size': 12})
     fmt_titulo_secao = workbook.add_format({'bold': True, 'font_size': 12})
-    fmt_header = workbook.add_format({'bold': True, 'border': 1, 'border_color': 'black', 'align': 'center', 'valign': 'vcenter', 'bg_color': '#E0E0E0', 'text_wrap': True})
+    fmt_header = workbook.add_format({'bold': True, 'border': 1, 'border_color': 'black', 'align': 'center', 'valign': 'vcenter', 'text_wrap': True})
     fmt_corpo = workbook.add_format({'border': 1, 'border_color': 'black', 'align': 'left', 'valign': 'vcenter'})
 
     s_row_ini = 3 
