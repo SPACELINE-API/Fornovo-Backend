@@ -4,7 +4,7 @@ import time
 import urllib.request
 import os
 
-MODELOS = ["nomic-embed-text", "minimax-m2.7:cloud"]
+MODELOS = ["nomic-embed-text", "llama3.1:8b"]
 
 
 def ollama_instalado() -> bool:
