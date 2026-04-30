@@ -12,8 +12,8 @@ from langchain_ollama import OllamaEmbeddings, OllamaLLM
 
 from apps.dados_ia.services.ollama_installer import ensure_ollama_cuda
 
-CHROMA_DIR = Path.home() / ".chroma_normas_db"
-MODELO_LLM = "llama3.1:8b"
+CHROMA_DIR = Path(__file__).resolve().parents[3] / "media" / "chroma_normas_db"
+MODELO_LLM = "llama3.1:8b" 
 MODELO_EMBEDDING = "nomic-embed-text"
 
 _NUM_CPU = multiprocessing.cpu_count()
@@ -429,6 +429,15 @@ def executar_agente(dados_extracao: dict) -> str:
     print(f"  Embeddings: {MODELO_EMBEDDING}")
     print(f"  ChromaDB: {CHROMA_DIR}")
 
+    chroma_vazio = not _chroma_tem_documentos(db_normas) # verifica se tem alguma norma no chromaDB
+    if chroma_vazio:
+        print("\n[AVISO] ChromaDB vazio — nenhuma NBR indexada.")
+        print("  Todas as verificações serão marcadas como NÃO CONFORME.")
+        print("  O relatório incluirá um aviso de ausência de base normativa.")
+    else:
+        normas_chroma = _extrair_normas_chroma(db_normas)
+        print(f"  Normas detectadas no ChromaDB: {sorted(normas_chroma) or ['(nenhuma identificada nos metadados)']}") 
+
     total = len(VERIFICACOES)
     print(f"\n[3/3] Executando {total} verificações...\n")
     print("-" * 60)
@@ -450,8 +459,31 @@ def executar_agente(dados_extracao: dict) -> str:
             f"          Evidências: {textos_found} texto(s) | {layers_found} layer(s) encontrado(s): {evidencias['layers_encontrados']} | {layers_miss} layer(s) ausente(s): {evidencias['layers_ausentes']}"
         )
 
-        contexto_norma = _consultar_norma(verif["query_norma"], db_normas)
-        avaliacao = _avaliar_com_llm(llm, verif, contexto_norma, resumo, evidencias)
+        if chroma_vazio: # se o chroma tiver vazio, marca tudo como não conforme
+            avaliacao = {
+                "status": "NÃO CONFORME",
+                "justificativa": "Nenhuma norma técnica está indexada na base de conhecimento (ChromaDB vazio). Não foi possível realizar a conferência normativa.",
+                "recomendacao": "Adicione os documentos das NBRs/NRs ao ChromaDB e execute a análise novamente.",
+            }
+        else: # se o chroma não estiver vazio
+ 
+            norma_ref_match = re.search(r'(NBR\s*\d+(?:[/-]\d+)?|NR-\d+)', verif["query_norma"], re.IGNORECASE)
+            norma_ref = norma_ref_match.group(1).upper() if norma_ref_match else None
+
+            norma_presente = _norma_esta_no_chroma(norma_ref, normas_chroma)
+
+            if not norma_presente: # se a norma não estiver no chroma, marca como não conforme
+              
+                norma_label = norma_ref or "norma não identificada"
+                avaliacao = {
+                    "status": "NÃO CONFORME",
+                    "justificativa": f"A norma referenciada ({norma_label}) não está indexada na base de conhecimento (ChromaDB). Conferência normativa não realizada.",
+                    "recomendacao": f"Indexe o documento da {norma_label} no ChromaDB para habilitar esta verificação.",
+                }
+                print(f"          ⚠️  {norma_label} não indexada — verificação ignorada (NÃO CONFORME)")
+            else:
+                contexto_norma = _consultar_norma(verif["query_norma"], db_normas)
+                avaliacao = _avaliar_com_llm(llm, verif, contexto_norma, resumo, evidencias)
 
         status = avaliacao["status"]
         icone = {"CONFORME": "✅", "NÃO CONFORME": "❌", "INCONCLUSIVO": "⚠️"}.get(
@@ -499,7 +531,8 @@ def executar_agente(dados_extracao: dict) -> str:
     )
     print("\nGerando relatório...")
 
-    relatorio = _gerar_relatorio(resultados, dados_extracao)
+    normas_utilizadas = set() if chroma_vazio else normas_chroma
+    relatorio = _gerar_relatorio(resultados, dados_extracao, normas_utilizadas=normas_utilizadas, sem_normas=chroma_vazio)
 
     print("Relatório gerado com sucesso.")
     print("=" * 60)
@@ -509,6 +542,7 @@ def executar_agente(dados_extracao: dict) -> str:
         "mensagem": "Elementos validados pela IA Real (Ollama + LangChain).",
         "relatorio_md": relatorio,
         "insights": resultados,
+        "normas_chroma_codigos": sorted(normas_utilizadas)  # códigos extraídos dos metadados do ChromaDB
     }
 
 
@@ -603,6 +637,40 @@ def _coletar_evidencias(verificacao: dict, indice: dict) -> dict:
         "layers_encontrados": layers_encontrados_unicos,
         "layers_ausentes": layers_ausentes,
     }
+
+
+def _chroma_tem_documentos(db: Chroma) -> bool:
+    try:
+        col = db._collection
+        return col.count() > 0
+    except Exception:
+        return False
+
+
+def _extrair_normas_chroma(db: Chroma) -> set:
+    normas = set()
+    try:
+        col = db._collection
+        result = col.get(include=["metadatas"])
+        metas = result.get("metadatas") or []
+        for meta in metas:
+            if meta:
+                codigo = meta.get("codigo", "").strip()
+                if codigo:
+                    normas.add(codigo)
+    except Exception:
+        pass
+    return normas
+
+
+def _norma_esta_no_chroma(norma_ref: str | None, normas_chroma: set) -> bool:
+    if not norma_ref or not normas_chroma:
+        return False
+
+    def _norm(s: str) -> str: # normaliza para comparação
+        return re.sub(r'\s+', '', s.upper())
+    ref_norm = _norm(norma_ref)
+    return any(_norm(n) == ref_norm or ref_norm in _norm(n) for n in normas_chroma)
 
 
 def _consultar_norma(query: str, db: Chroma, k: int = 5) -> str:
@@ -892,8 +960,8 @@ Responda SOMENTE este JSON, sem texto antes ou depois:
         }
 
 
-def _gerar_relatorio(resultados: list, extracao: dict) -> str:
-    nome_arquivo = Path(extracao.get("arquivo", "desconhecido")).name
+def _gerar_relatorio(resultados: list, extracao: dict, normas_utilizadas: set = None, sem_normas: bool = False) -> str:
+    nome_arquivo = Path(extracao.get('arquivo', 'desconhecido')).name
     data_hora = datetime.now().strftime("%d/%m/%Y %H:%M")
 
     conformes = sum(1 for r in resultados if r["avaliacao"]["status"] == "CONFORME")
@@ -907,14 +975,32 @@ def _gerar_relatorio(resultados: list, extracao: dict) -> str:
 
     icone = {"CONFORME": "✅", "NÃO CONFORME": "❌", "INCONCLUSIVO": "⚠️"}
 
+    if sem_normas or not normas_utilizadas: # se não tiver normas, marca como não conforme
+        normas_str = "⚠️ Nenhuma norma indexada — conferência normativa não realizada"
+    else: # se tiver normas, lista elas
+        normas_str = ", ".join(sorted(normas_utilizadas))
+
     linhas = [
         "# Relatório de Conformidade NBR — Planta Elétrica",
         "",
         f"**Arquivo analisado:** `{nome_arquivo}`  ",
         f"**Data/Hora:** {data_hora}  ",
-        f"**Normas de referência:** NBR 5410, NBR 5419, NR-10, NBR 6123, NBR 9050  ",
+        f"**Normas de referência:** {normas_str}  ",
         f"**Total de verificações:** {total}  ",
         "",
+    ]
+
+
+    if sem_normas: # se não tiver normas, marca como não conforme
+        linhas += [
+            "> ⚠️ **ATENÇÃO:** Este relatório foi gerado **sem conferência com nenhuma norma técnica** (NBR/NR).",
+            "> Nenhum documento normativo está indexado na base de conhecimento (ChromaDB).",
+            "> Todos os itens foram marcados como **NÃO CONFORME** por ausência de base normativa.",
+            "> Para uma análise técnica válida, indexe os documentos das normas aplicáveis e execute novamente.",
+            "",
+        ]
+
+    linhas += [
         "## Sumário Executivo",
         "",
         "| Status | Qtd | % |",
@@ -969,12 +1055,19 @@ def _gerar_relatorio(resultados: list, extracao: dict) -> str:
 
             linhas.append("")
 
+    obs_normas = (
+        "- **Base normativa ausente:** nenhuma NBR/NR estava indexada. Conferência normativa **não foi realizada**."
+        if sem_normas else
+        f"- Normas consultadas na base ChromaDB: {normas_str}."
+    )
+
     linhas += [
         "---",
         "",
         "## Observações Gerais",
         "",
         "- Relatório gerado automaticamente por agente RAG local (Ollama + ChromaDB).",
+        obs_normas,
         "- Itens **INCONCLUSIVOS** indicam evidências insuficientes — recomenda-se revisão manual.",
         "- Este relatório **não substitui** laudo técnico assinado por engenheiro responsável.",
         "",
