@@ -46,25 +46,27 @@ _lock = threading.Lock()
 BASE_DIR = Path(__file__).resolve().parents[2]
 MEDIA_PATH = BASE_DIR / "media" / "nbr-pdf"
 
-def ExtrairSalvarNormas(relatorio_md, projeto):
+def ExtrairSalvarNormas(normas_codigos: list, projeto):
     try:
-        print("Iniciando extração de normas do relatório...")
-        match = re.search(r'Normas[^:]*:\s*([^\n]+)', relatorio_md, re.IGNORECASE)
-        if match:
-            normas_encontradas = match.group(1)
-            normas_encontradas = normas_encontradas.replace('*', '').replace('_', '')
-            lista_normas = [n.strip() for n in normas_encontradas.split(',') if n.strip()]
-            
-            print(f"Normas encontradas no texto: {lista_normas}")
-            
-            from apps.projetos.models import ProjetoNorma
-            for norma_nome in lista_normas:
-                ProjetoNorma.objects.create(projeto=projeto, norma=norma_nome)
-                print(f"Norma '{norma_nome}' vinculada com sucesso no banco!")
-        else:
-            print("Normas não encontradas no projeto!")
+        from apps.normas.models import Norma as NormaCadastrada
+        from apps.projetos.models import ProjetoNorma
+
+        if not normas_codigos:
+            print("Nenhuma norma utilizada na análise (ChromaDB vazio).")
+            return
+
+        print(f"Vinculando normas ao projeto: {normas_codigos}")
+
+        for codigo in normas_codigos:
+            codigo = codigo.strip()
+            # busca no banco pelo código exato
+            norma_bd = NormaCadastrada.objects.filter(codigo__iexact=codigo).first()
+            nome_vinculo = norma_bd.codigo if norma_bd else codigo
+            ProjetoNorma.objects.create(projeto=projeto, norma=nome_vinculo)
+            print(f"Norma '{nome_vinculo}' vinculada com sucesso no banco!")
+
     except Exception as e:
-        print(f"Erro ao extrair e salvar normas: {e}")
+        print(f"Erro ao vincular normas: {e}")
 
 class CadastrarDadosExtraidos(APIView):
     permission_classes = [AllowAny]
@@ -320,7 +322,8 @@ class ProcessarProjetoIA(APIView):
                 except Exception as e:
                     print(f"Erro ao salvar relatório: {e}")
                     
-                ExtrairSalvarNormas(relatorio_md, projeto)
+                normas_codigos = retorno_ia.get("normas_chroma_codigos", [])
+                ExtrairSalvarNormas(normas_codigos, projeto)
             
             response_time = time.time() - start_time
             if response_time > 60:
