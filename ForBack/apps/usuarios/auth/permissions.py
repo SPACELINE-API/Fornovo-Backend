@@ -12,18 +12,4 @@ class IsRevisor(BasePermission):
     def has_permission(self, request, view):
         return bool(request.user and hasattr(request.user, 'nivel_usuario') and request.user.nivel_usuario == 'Revisor')
 
-class IsAdmOrProjetista(BasePermission):
-    def has_permission(self, request, view):
-        return bool(
-            request.user and 
-            hasattr(request.user, 'nivel_usuario') and 
-            request.user.nivel_usuario in ['Administrador', 'Projetista']
-        )
 
-class IsAdmOrRevisor(BasePermission):
-    def has_permission(self, request, view):
-        return bool(
-            request.user and 
-            hasattr(request.user, 'nivel_usuario') and 
-            request.user.nivel_usuario in ['Administrador', 'Revisor']
-        )

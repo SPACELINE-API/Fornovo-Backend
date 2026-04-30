@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from apps.usuarios.auth.permissions import IsAdm, IsAdmOrProjetista, IsAdmOrRevisor
+from apps.usuarios.auth.permissions import IsAdm
 from rest_framework.response import Response
 from .models import Usuario
 from django.contrib.auth.hashers import make_password, check_password
