@@ -33,7 +33,7 @@ class criarUsuario(APIView):
             return Response({"erro": str(e)}, status=400)
 
 class listarUsuario(APIView):
-    permission_classes = [IsAuthenticated, IsAdmOrProjetista]
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         usuarios = Usuario.objects.all()
 

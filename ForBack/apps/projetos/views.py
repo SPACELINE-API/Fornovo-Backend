@@ -11,7 +11,7 @@ from django.http import FileResponse
 import hashlib
 
 class cadastrarProjeto(APIView):
-    permission_classes = [IsAuthenticated, IsAdmOrProjetista]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
 
@@ -55,7 +55,7 @@ class buscarProjeto(APIView):
         return Response(serializer.data) 
 
 class ProjetoDelete(APIView):
-    permission_classes = [IsAuthenticated, IsAdm]
+    permission_classes = [IsAuthenticated]
 
     def delete(self, request, id_projeto):
         try:
@@ -70,7 +70,7 @@ class ProjetoDelete(APIView):
             )
 
 class AtualizarStatusProjeto(APIView):
-    permission_classes = [IsAuthenticated, IsAdmOrRevisor]
+    permission_classes = [IsAuthenticated]
 
     def patch(self, request, id_projeto):
         try:
@@ -105,7 +105,7 @@ class AtualizarStatusProjeto(APIView):
             )
         
 class ProjetoUpdate(APIView):
-    permission_classes = [IsAuthenticated, IsAdmOrProjetista]
+    permission_classes = [IsAuthenticated]
 
     def patch(self, request, id_projeto):
         try:
@@ -134,7 +134,7 @@ class ProjetoUpdate(APIView):
             )
 
 class uploadArquivo(APIView): 
-    permission_classes = [IsAuthenticated, IsAdmOrProjetista]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
@@ -272,7 +272,7 @@ class VerificarStatusIA(APIView):
 
 
 class UploadEspecificacao(APIView):
-    permission_classes = [IsAuthenticated, IsAdmOrProjetista]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         arquivo = request.FILES.get('arquivo')
