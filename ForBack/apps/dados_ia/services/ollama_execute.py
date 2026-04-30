@@ -13,7 +13,7 @@ from langchain_ollama import OllamaEmbeddings, OllamaLLM
 from apps.dados_ia.services.ollama_installer import ensure_ollama_cuda
 
 CHROMA_DIR = Path(__file__).resolve().parents[3] / "media" / "chroma_normas_db"
-MODELO_LLM = "llama3.1:8b" 
+MODELO_LLM = "minimax-m2.7:cloud"
 MODELO_EMBEDDING = "nomic-embed-text"
 
 _NUM_CPU = multiprocessing.cpu_count()
@@ -31,15 +31,37 @@ VERIFICACOES = [
         "categoria": "Aterramento",
         "descricao": "Sistema de aterramento presente (malha, haste cobreada, eletrodo)",
         "query_norma": "sistema aterramento eletrodo haste cobreada malha NBR 5410",
-        "busca_textos": ["MALHA TERRA", "HASTE COBREADA", "ATERRAMENTO", "TERRA", "MALHA DE ATERRAMENTO", "ELETRODO"],
-        "busca_layers": ["ELE-MALHA TERRA", "ELE-HASTE COBREADA", "MALHA TERRA", "HASTE COBREADA", "ATERRAMENTO", "Elétrica"],
+        "busca_textos": [
+            "MALHA TERRA",
+            "HASTE COBREADA",
+            "ATERRAMENTO",
+            "TERRA",
+            "MALHA DE ATERRAMENTO",
+            "ELETRODO",
+        ],
+        "busca_layers": [
+            "ELE-MALHA TERRA",
+            "ELE-HASTE COBREADA",
+            "MALHA TERRA",
+            "HASTE COBREADA",
+            "ATERRAMENTO",
+            "Elétrica",
+        ],
     },
     {
         "id": "ATR-02",
         "categoria": "Aterramento",
         "descricao": "Seção mínima do condutor de aterramento (≥ 16mm² cobre nu para malha enterrada)",
         "query_norma": "seção mínima condutor aterramento cobre nu milímetros NBR 5410",
-        "busca_textos": ["#35MM²", "#50MM²", "NÚ #35", "NÚ #50", "CABO DE COBRE", "MM²", "COBRE NU"],
+        "busca_textos": [
+            "#35MM²",
+            "#50MM²",
+            "NÚ #35",
+            "NÚ #50",
+            "CABO DE COBRE",
+            "MM²",
+            "COBRE NU",
+        ],
         "busca_layers": ["ELE-TEXTOS", "TEXTOS", "Elétrica"],
     },
     {
@@ -47,16 +69,42 @@ VERIFICACOES = [
         "categoria": "Aterramento",
         "descricao": "Conexões de aterramento por solda exotérmica ou conector apropriado",
         "query_norma": "conexão aterramento solda exotérmica conector aprovado NBR",
-        "busca_textos": ["SOLDA EXOTÉRMICA", "CONECTORES APROPRIADOS", "CONECTOR SPLIT BOLT", "CONECTOR DE EMENDA", "CONECTOR BIMETÁLICO"],
-        "busca_layers": ["ELE-SOLDA EXOTÉRMICA", "ELE-CONECTOR SPLIT BOLT", "ELE-CONECTOR DE EMENDA", "ELE-CONCETOR BIMETÁLICO", "SOLDA", "CONECTOR", "Elétrica"],
+        "busca_textos": [
+            "SOLDA EXOTÉRMICA",
+            "CONECTORES APROPRIADOS",
+            "CONECTOR SPLIT BOLT",
+            "CONECTOR DE EMENDA",
+            "CONECTOR BIMETÁLICO",
+        ],
+        "busca_layers": [
+            "ELE-SOLDA EXOTÉRMICA",
+            "ELE-CONECTOR SPLIT BOLT",
+            "ELE-CONECTOR DE EMENDA",
+            "ELE-CONCETOR BIMETÁLICO",
+            "SOLDA",
+            "CONECTOR",
+            "Elétrica",
+        ],
     },
     {
         "id": "ATR-04",
         "categoria": "Aterramento",
         "descricao": "Equipotencialização de massas metálicas (eletrocalhas, eletrodutos, tubulações)",
         "query_norma": "equipotencialização massas metálicas eletrocalhas eletrodutos NBR 5410",
-        "busca_textos": ["EQUIPOTENCIALIZAÇÃO", "MASSAS METÁLICAS", "ELETROCALHAS", "ELETRODUTOS", "COMBATE A INCÊNDIO"],
-        "busca_layers": ["ELE-TEXTOS", "TEXTOS", "ELETROCALHA", "ELETRODUTO", "Elétrica"],
+        "busca_textos": [
+            "EQUIPOTENCIALIZAÇÃO",
+            "MASSAS METÁLICAS",
+            "ELETROCALHAS",
+            "ELETRODUTOS",
+            "COMBATE A INCÊNDIO",
+        ],
+        "busca_layers": [
+            "ELE-TEXTOS",
+            "TEXTOS",
+            "ELETROCALHA",
+            "ELETRODUTO",
+            "Elétrica",
+        ],
     },
     {
         "id": "ATR-05",
@@ -64,23 +112,50 @@ VERIFICACOES = [
         "descricao": "Caixa de inspeção presente para acesso ao sistema de aterramento",
         "query_norma": "caixa inspeção aterramento acesso medição resistência NBR",
         "busca_textos": ["CX. INSPEÇÃO", "CAIXA DE INSPEÇÃO", "CX INSPECAO"],
-        "busca_layers": ["ELE-CX. INSPEÇÃO", "CX. INSPEÇÃO", "CAIXA INSPEÇÃO", "Elétrica"],
+        "busca_layers": [
+            "ELE-CX. INSPEÇÃO",
+            "CX. INSPEÇÃO",
+            "CAIXA INSPEÇÃO",
+            "Elétrica",
+        ],
     },
     {
         "id": "SPDA-01",
         "categoria": "SPDA (Para-raios)",
         "descricao": "Sistema SPDA presente com malha e descidas identificadas",
         "query_norma": "SPDA para-raios malha descida captores NBR 5419",
-        "busca_textos": ["SPDA", "MALHA SPDA", "DESCIDA BARRA CHATA", "TERMINAL AÉREO", "PARA-RAIOS", "CAPTOR"],
-        "busca_layers": ["ELE-MALHA SPDA", "ELE-TERMINAL AÉREO", "ELE-TUBO DESCIDA", "MALHA SPDA", "SPDA", "TERMINAL", "Elétrica"],
+        "busca_textos": [
+            "SPDA",
+            "MALHA SPDA",
+            "DESCIDA BARRA CHATA",
+            "TERMINAL AÉREO",
+            "PARA-RAIOS",
+            "CAPTOR",
+        ],
+        "busca_layers": [
+            "ELE-MALHA SPDA",
+            "ELE-TERMINAL AÉREO",
+            "ELE-TUBO DESCIDA",
+            "MALHA SPDA",
+            "SPDA",
+            "TERMINAL",
+            "Elétrica",
+        ],
     },
     {
         "id": "SPDA-02",
         "categoria": "SPDA (Para-raios)",
-        "descricao": "Descidas em barra chata de alumínio com dimensões adequadas (mín. 7/8\"x1/8\")",
+        "descricao": 'Descidas em barra chata de alumínio com dimensões adequadas (mín. 7/8"x1/8")',
         "query_norma": "descida SPDA barra chata alumínio dimensão mínima NBR 5419",
         "busca_textos": ["BARRA CHATA", "ALUMÍNIO", "7/8", "1/8", "DESCIDA"],
-        "busca_layers": ["ELE-BARRA CHATA ALUMÍNIO", "ELE-TEXTOS", "BARRA CHATA", "SPDA", "TEXTOS", "Elétrica"],
+        "busca_layers": [
+            "ELE-BARRA CHATA ALUMÍNIO",
+            "ELE-TEXTOS",
+            "BARRA CHATA",
+            "SPDA",
+            "TEXTOS",
+            "Elétrica",
+        ],
     },
     {
         "id": "SPDA-03",
@@ -88,14 +163,29 @@ VERIFICACOES = [
         "descricao": "Fixadores e rebites utilizados nas descidas do SPDA",
         "query_norma": "fixação descidas SPDA parafusos fixadores NBR 5419",
         "busca_textos": ["FIXADOR", "REBITE", "PARAFUSO", "BUCHA DE NYLON"],
-        "busca_layers": ["ELE-FIXADOR GELCAM", "ELE-REBITE", "FIXADOR", "REBITE", "SPDA", "Elétrica"],
+        "busca_layers": [
+            "ELE-FIXADOR GELCAM",
+            "ELE-REBITE",
+            "FIXADOR",
+            "REBITE",
+            "SPDA",
+            "Elétrica",
+        ],
     },
     {
         "id": "PROT-01",
         "categoria": "Proteção e Quadros",
         "descricao": "Quadro geral de distribuição (QDG) presente e identificado",
         "query_norma": "quadro geral distribuição QDG identificação NBR 5410",
-        "busca_textos": ["QDG", "QUADRO", "PAINEL", "AUTOPORTANTE", "QD.", "QDC", "QGBT"],
+        "busca_textos": [
+            "QDG",
+            "QUADRO",
+            "PAINEL",
+            "AUTOPORTANTE",
+            "QD.",
+            "QDC",
+            "QGBT",
+        ],
         "busca_layers": ["ELE-CIRCUITO", "CIRCUITO", "QUADRO", "Elétrica"],
     },
     {
@@ -103,7 +193,15 @@ VERIFICACOES = [
         "categoria": "Proteção e Quadros",
         "descricao": "Disjuntores com capacidade de interrupção declarada (Icc ≥ 10kA para BT)",
         "query_norma": "capacidade interrupção disjuntor corrente curto circuito Icc NBR 5410",
-        "busca_textos": ["Icc=20kA", "Icc=18kA", "DISJUNTOR", "DISJ. GER.", "CX. MOLDADA", "ICC", "KA"],
+        "busca_textos": [
+            "Icc=20kA",
+            "Icc=18kA",
+            "DISJUNTOR",
+            "DISJ. GER.",
+            "CX. MOLDADA",
+            "ICC",
+            "KA",
+        ],
         "busca_layers": ["ELE-CIRCUITO", "CIRCUITO", "DISJUNTOR", "Elétrica"],
     },
     {
@@ -111,7 +209,12 @@ VERIFICACOES = [
         "categoria": "Proteção e Quadros",
         "descricao": "Barramento com seção mínima declarada (≥ 400A conforme projeto)",
         "query_norma": "barramento seção mínima amperagem quadro distribuição NBR 5410",
-        "busca_textos": ["BARRAMENTO CENTRAL", "SECÇÃO MÍNIMA 400A", "400A", "BARRAMENTO"],
+        "busca_textos": [
+            "BARRAMENTO CENTRAL",
+            "SECÇÃO MÍNIMA 400A",
+            "400A",
+            "BARRAMENTO",
+        ],
         "busca_layers": ["ELE-CIRCUITO", "CIRCUITO", "BARRAMENTO", "Elétrica"],
     },
     {
@@ -119,7 +222,12 @@ VERIFICACOES = [
         "categoria": "Proteção e Quadros",
         "descricao": "Padrão de entrada de baixa tensão identificado (concessionária)",
         "query_norma": "padrão entrada baixa tensão concessionária ramal NBR 5410",
-        "busca_textos": ["PADRÃO DE ENTRADA BAIXA TENSÃO", "CENTRO MEDIÇÃO", "DUPLO T 300", "PADRÃO DE ENTRADA"],
+        "busca_textos": [
+            "PADRÃO DE ENTRADA BAIXA TENSÃO",
+            "CENTRO MEDIÇÃO",
+            "DUPLO T 300",
+            "PADRÃO DE ENTRADA",
+        ],
         "busca_layers": ["Elétrica", "ENTRADA", "PADRAO"],
     },
     {
@@ -159,7 +267,13 @@ VERIFICACOES = [
         "categoria": "Circuitos e Cargas",
         "descricao": "Circuitos de ar condicionado com circuito exclusivo (uso específico)",
         "query_norma": "circuito exclusivo uso específico ar condicionado chuveiro NBR 5410",
-        "busca_textos": ["AP. AR COND.", "BTU", "CORTINA AR", "AR CONDICIONADO", "AR COND"],
+        "busca_textos": [
+            "AP. AR COND.",
+            "BTU",
+            "CORTINA AR",
+            "AR CONDICIONADO",
+            "AR COND",
+        ],
         "busca_layers": ["Elétrica", "CIRCUITO", "AR CONDICIONADO"],
     },
     {
@@ -175,7 +289,13 @@ VERIFICACOES = [
         "categoria": "Documentação",
         "descricao": "Notas técnicas e memória de cálculo referenciadas no projeto",
         "query_norma": "memória de cálculo ART documentação projeto elétrico NR-10 NBR",
-        "busca_textos": ["ART", "MEMÓRIA DE CÁLCULO", "PROFISSIONAL CAPACITADO", "VALIDAÇÃO", "MEMORIA DE CALCULO"],
+        "busca_textos": [
+            "ART",
+            "MEMÓRIA DE CÁLCULO",
+            "PROFISSIONAL CAPACITADO",
+            "VALIDAÇÃO",
+            "MEMORIA DE CALCULO",
+        ],
         "busca_layers": ["ELE-TEXTOS", "TEXTOS", "NOTAS", "Elétrica"],
     },
     {
@@ -183,31 +303,84 @@ VERIFICACOES = [
         "categoria": "Documentação",
         "descricao": "Projeto classificado como básico com exigência de validação profissional",
         "query_norma": "projeto básico aterramento validação profissional habilitado NR-10",
-        "busca_textos": ["PROJETO BÁSICO", "VALIDAÇÃO", "EMPRESA VENCEDORA", "PROJETO BASICO"],
+        "busca_textos": [
+            "PROJETO BÁSICO",
+            "VALIDAÇÃO",
+            "EMPRESA VENCEDORA",
+            "PROJETO BASICO",
+        ],
         "busca_layers": ["ELE-TEXTOS", "TEXTOS", "NOTAS", "Elétrica"],
     },
 ]
 
 REGRAS_VALORES = {
-    "ATR-01": {"tipo": "existe", "campos": ["MALHA TERRA", "MALHA DE ATERRAMENTO", "HASTE COBREADA", "HASTE DE TERRA", "ELETRODO"]},
-    "ATR-02": {"tipo": "secao_mm2", "minimo": 16, "padrao": r"#([0-9]+)\s*mm", "padrao_alt": r"COBRE\s+N[ÚU].*?#([0-9]+)"},
-    "ATR-03": {"tipo": "existe", "campos": ["SOLDA EXOTERMICA", "CONECTOR SPLIT BOLT", "CONECTOR DE EMENDA", "CONECTOR BIMETALICO", "CONECTORES APROPRIADOS"]},
-    "ATR-04": {"tipo": "existe", "campos": ["EQUIPOTENCIALIZACAO", "MASSAS METALICAS", "ELETROCALHAS", "ATERRADAS"]},
+    "ATR-01": {
+        "tipo": "existe",
+        "campos": [
+            "MALHA TERRA",
+            "MALHA DE ATERRAMENTO",
+            "HASTE COBREADA",
+            "HASTE DE TERRA",
+            "ELETRODO",
+        ],
+    },
+    "ATR-02": {
+        "tipo": "secao_mm2",
+        "minimo": 16,
+        "padrao": r"#([0-9]+)\s*mm",
+        "padrao_alt": r"COBRE\s+N[ÚU].*?#([0-9]+)",
+    },
+    "ATR-03": {
+        "tipo": "existe",
+        "campos": [
+            "SOLDA EXOTERMICA",
+            "CONECTOR SPLIT BOLT",
+            "CONECTOR DE EMENDA",
+            "CONECTOR BIMETALICO",
+            "CONECTORES APROPRIADOS",
+        ],
+    },
+    "ATR-04": {
+        "tipo": "existe",
+        "campos": [
+            "EQUIPOTENCIALIZACAO",
+            "MASSAS METALICAS",
+            "ELETROCALHAS",
+            "ATERRADAS",
+        ],
+    },
     "ATR-05": {"tipo": "existe", "campos": ["CAIXA DE INSPECAO", "CX. INSPECAO"]},
-    "SPDA-01": {"tipo": "existe", "campos": ["MALHA SPDA", "MALHA DO SPDA", "MALHA DE BARRA CHATA DO SPDA", "TERMINAL"]},
+    "SPDA-01": {
+        "tipo": "existe",
+        "campos": [
+            "MALHA SPDA",
+            "MALHA DO SPDA",
+            "MALHA DE BARRA CHATA DO SPDA",
+            "TERMINAL",
+        ],
+    },
     "SPDA-02": {"tipo": "existe", "campos": ["BARRA CHATA", "ALUMINIO", "DESCIDA"]},
     "SPDA-03": {"tipo": "existe", "campos": ["FIXADOR", "REBITE", "PARAFUSO"]},
-    "PROT-01": {"tipo": "existe", "campos": ["QDG", "QUADRO DE DISTRIBUICAO", "PAINEL"]},
+    "PROT-01": {
+        "tipo": "existe",
+        "campos": ["QDG", "QUADRO DE DISTRIBUICAO", "PAINEL"],
+    },
     "PROT-02": {"tipo": "icc_ka", "minimo": 10, "padrao": r"ICC\s*=\s*([0-9]+)\s*KA"},
     "PROT-03": {"tipo": "amperagem", "minimo": 400, "padrao": r"([0-9]+)\s*A\b"},
-    "PROT-04": {"tipo": "existe", "campos": ["PADRAO DE ENTRADA", "BAIXA TENSAO", "CENTRO MEDICAO"]},
+    "PROT-04": {
+        "tipo": "existe",
+        "campos": ["PADRAO DE ENTRADA", "BAIXA TENSAO", "CENTRO MEDICAO"],
+    },
     "COND-01": {"tipo": "existe_todos", "campos": ["EPR", "90", "1,0KV", "ISOL"]},
     "COND-02": {"tipo": "existe", "campos": ["TERRA", "ATERRAMENTO", "PROTECAO"]},
     "COND-03": {"tipo": "existe", "campos": ["NEUTRO"]},
     "CIRC-01": {"tipo": "regex", "padrao": r"CS-[0-9]+"},
     "CIRC-02": {"tipo": "existe", "campos": ["AR COND", "BTU"]},
     "CIRC-03": {"tipo": "existe_todos", "campos": ["CARGA", "CORRENTE"]},
-    "DOC-01": {"tipo": "existe", "campos": ["ART", "MEMORIA DE CALCULO", "PROFISSIONAL"]},
+    "DOC-01": {
+        "tipo": "existe",
+        "campos": ["ART", "MEMORIA DE CALCULO", "PROFISSIONAL"],
+    },
     "DOC-02": {"tipo": "existe", "campos": ["PROJETO BASICO", "VALIDACAO"]},
 }
 
@@ -224,7 +397,7 @@ def executar_agente(dados_extracao: dict) -> str:
     print(f"  Layers encontrados: {len(indice['layers_presentes'])}")
     print(f"  Layers reais: {sorted(indice['layers_presentes'])}")
     print(f"  Textos indexados: {len(indice['todos_textos'])}")
-    amostra_textos = [f"    [{t[1]}] {t[2][:80]}" for t in indice['todos_textos'][:15]]
+    amostra_textos = [f"    [{t[1]}] {t[2][:80]}" for t in indice["todos_textos"][:15]]
     if amostra_textos:
         print(f"  Amostra de textos (até 15):")
         for linha in amostra_textos:
@@ -232,7 +405,9 @@ def executar_agente(dados_extracao: dict) -> str:
 
     print("\n[2/3] Inicializando modelos Ollama...")
     gpu_layers = -1 if _USE_GPU else 0
-    embeddings = OllamaEmbeddings(model=MODELO_EMBEDDING, num_thread=_NUM_THREADS, num_gpu=gpu_layers)
+    embeddings = OllamaEmbeddings(
+        model=MODELO_EMBEDDING, num_thread=_NUM_THREADS, num_gpu=gpu_layers
+    )
     llm = OllamaLLM(
         model=MODELO_LLM,
         num_ctx=4096,
@@ -254,14 +429,18 @@ def executar_agente(dados_extracao: dict) -> str:
     print(f"  Embeddings: {MODELO_EMBEDDING}")
     print(f"  ChromaDB: {CHROMA_DIR}")
 
-    chroma_vazio = not _chroma_tem_documentos(db_normas) # verifica se tem alguma norma no chromaDB
+    chroma_vazio = not _chroma_tem_documentos(
+        db_normas
+    )  # verifica se tem alguma norma no chromaDB
     if chroma_vazio:
         print("\n[AVISO] ChromaDB vazio — nenhuma NBR indexada.")
         print("  Todas as verificações serão marcadas como NÃO CONFORME.")
         print("  O relatório incluirá um aviso de ausência de base normativa.")
     else:
         normas_chroma = _extrair_normas_chroma(db_normas)
-        print(f"  Normas detectadas no ChromaDB: {sorted(normas_chroma) or ['(nenhuma identificada nos metadados)']}") 
+        print(
+            f"  Normas detectadas no ChromaDB: {sorted(normas_chroma) or ['(nenhuma identificada nos metadados)']}"
+        )
 
     total = len(VERIFICACOES)
     print(f"\n[3/3] Executando {total} verificações...\n")
@@ -280,36 +459,48 @@ def executar_agente(dados_extracao: dict) -> str:
         textos_found = len(evidencias["ocorrencias_texto"])
         layers_found = len(evidencias["layers_encontrados"])
         layers_miss = len(evidencias["layers_ausentes"])
-        print(f"          Evidências: {textos_found} texto(s) | {layers_found} layer(s) encontrado(s): {evidencias['layers_encontrados']} | {layers_miss} layer(s) ausente(s): {evidencias['layers_ausentes']}")
+        print(
+            f"          Evidências: {textos_found} texto(s) | {layers_found} layer(s) encontrado(s): {evidencias['layers_encontrados']} | {layers_miss} layer(s) ausente(s): {evidencias['layers_ausentes']}"
+        )
 
-        if chroma_vazio: # se o chroma tiver vazio, marca tudo como não conforme
+        if chroma_vazio:  # se o chroma tiver vazio, marca tudo como não conforme
             avaliacao = {
                 "status": "NÃO CONFORME",
                 "justificativa": "Nenhuma norma técnica está indexada na base de conhecimento (ChromaDB vazio). Não foi possível realizar a conferência normativa.",
                 "recomendacao": "Adicione os documentos das NBRs/NRs ao ChromaDB e execute a análise novamente.",
             }
-        else: # se o chroma não estiver vazio
- 
-            norma_ref_match = re.search(r'(NBR\s*\d+(?:[/-]\d+)?|NR-\d+)', verif["query_norma"], re.IGNORECASE)
+        else:  # se o chroma não estiver vazio
+
+            norma_ref_match = re.search(
+                r"(NBR\s*\d+(?:[/-]\d+)?|NR-\d+)", verif["query_norma"], re.IGNORECASE
+            )
             norma_ref = norma_ref_match.group(1).upper() if norma_ref_match else None
 
             norma_presente = _norma_esta_no_chroma(norma_ref, normas_chroma)
 
-            if not norma_presente: # se a norma não estiver no chroma, marca como não conforme
-              
+            if (
+                not norma_presente
+            ):  # se a norma não estiver no chroma, marca como não conforme
+
                 norma_label = norma_ref or "norma não identificada"
                 avaliacao = {
                     "status": "NÃO CONFORME",
                     "justificativa": f"A norma referenciada ({norma_label}) não está indexada na base de conhecimento (ChromaDB). Conferência normativa não realizada.",
                     "recomendacao": f"Indexe o documento da {norma_label} no ChromaDB para habilitar esta verificação.",
                 }
-                print(f"          ⚠️  {norma_label} não indexada — verificação ignorada (NÃO CONFORME)")
+                print(
+                    f"          ⚠️  {norma_label} não indexada — verificação ignorada (NÃO CONFORME)"
+                )
             else:
                 contexto_norma = _consultar_norma(verif["query_norma"], db_normas)
-                avaliacao = _avaliar_com_llm(llm, verif, contexto_norma, resumo, evidencias)
+                avaliacao = _avaliar_com_llm(
+                    llm, verif, contexto_norma, resumo, evidencias
+                )
 
         status = avaliacao["status"]
-        icone = {"CONFORME": "✅", "NÃO CONFORME": "❌", "INCONCLUSIVO": "⚠️"}.get(status, "❓")
+        icone = {"CONFORME": "✅", "NÃO CONFORME": "❌", "INCONCLUSIVO": "⚠️"}.get(
+            status, "❓"
+        )
 
         if status == "CONFORME":
             conformes += 1
@@ -324,28 +515,41 @@ def executar_agente(dados_extracao: dict) -> str:
         print(f"          Progresso: [{barra}] {pct}% ({i}/{total})")
         print()
 
-        norma_match = re.search(r'(NBR\s+\d+|NR-\d+)', verif["query_norma"], re.IGNORECASE)
+        norma_match = re.search(
+            r"(NBR\s+\d+|NR-\d+)", verif["query_norma"], re.IGNORECASE
+        )
         norma_codigo = norma_match.group(1).upper() if norma_match else "NBR GERAL"
 
-        resultados.append({
-            "id": verif["id"],
-            "norma_codigo": norma_codigo,
-            "categoria": verif["categoria"],
-            "descricao": verif["descricao"],
-            "avaliacao": avaliacao,
-            "evidencias": evidencias,
-        })
+        resultados.append(
+            {
+                "id": verif["id"],
+                "norma_codigo": norma_codigo,
+                "categoria": verif["categoria"],
+                "descricao": verif["descricao"],
+                "avaliacao": avaliacao,
+                "evidencias": evidencias,
+            }
+        )
 
     print("-" * 60)
     print("\nRESULTADO FINAL")
     print("-" * 60)
     print(f"  ✅ Conformes:      {conformes}/{total} ({round(conformes/total*100)}%)")
-    print(f"  ❌ Não Conformes:  {nao_conformes}/{total} ({round(nao_conformes/total*100)}%)")
-    print(f"  ⚠️  Inconclusivos:  {inconclusivos}/{total} ({round(inconclusivos/total*100)}%)")
+    print(
+        f"  ❌ Não Conformes:  {nao_conformes}/{total} ({round(nao_conformes/total*100)}%)"
+    )
+    print(
+        f"  ⚠️  Inconclusivos:  {inconclusivos}/{total} ({round(inconclusivos/total*100)}%)"
+    )
     print("\nGerando relatório...")
 
     normas_utilizadas = set() if chroma_vazio else normas_chroma
-    relatorio = _gerar_relatorio(resultados, dados_extracao, normas_utilizadas=normas_utilizadas, sem_normas=chroma_vazio)
+    relatorio = _gerar_relatorio(
+        resultados,
+        dados_extracao,
+        normas_utilizadas=normas_utilizadas,
+        sem_normas=chroma_vazio,
+    )
 
     print("Relatório gerado com sucesso.")
     print("=" * 60)
@@ -355,7 +559,9 @@ def executar_agente(dados_extracao: dict) -> str:
         "mensagem": "Elementos validados pela IA Real (Ollama + LangChain).",
         "relatorio_md": relatorio,
         "insights": resultados,
-        "normas_chroma_codigos": sorted(normas_utilizadas)  # códigos extraídos dos metadados do ChromaDB
+        "normas_chroma_codigos": sorted(
+            normas_utilizadas
+        ),  # códigos extraídos dos metadados do ChromaDB
     }
 
 
@@ -375,7 +581,11 @@ def _preparar_indice(extracao: dict) -> dict:
 
 def _resumo_planta(extracao: dict) -> str:
     r = extracao.get("resumo", {})
-    layers_ele = [l for l in extracao.get("layers", []) if "ELE" in l.upper() or "ELÉTR" in l.upper()]
+    layers_ele = [
+        l
+        for l in extracao.get("layers", [])
+        if "ELE" in l.upper() or "ELÉTR" in l.upper()
+    ]
     return (
         f"Arquivo: {Path(extracao.get('arquivo', '')).name}\n"
         f"Layers elétricos: {', '.join(layers_ele)}\n"
@@ -386,11 +596,11 @@ def _resumo_planta(extracao: dict) -> str:
 
 def _limpar_texto_dxf(texto: str) -> str:
     t = _remover_acentos(texto.upper())
-    t = re.sub(r'%%[A-Z]', '', t)
-    t = re.sub(r'\\P', ' ', t)
-    t = re.sub(r'\\[a-zA-Z]\d*[;,]?', ' ', t)
-    t = re.sub(r'[{}\\()]', ' ', t)
-    t = re.sub(r'\s+', ' ', t).strip()
+    t = re.sub(r"%%[A-Z]", "", t)
+    t = re.sub(r"\\P", " ", t)
+    t = re.sub(r"\\[a-zA-Z]\d*[;,]?", " ", t)
+    t = re.sub(r"[{}\\()]", " ", t)
+    t = re.sub(r"\s+", " ", t).strip()
     return t
 
 
@@ -398,8 +608,8 @@ def _match_texto_flexivel(texto_limpo: str, termo: str) -> bool:
     t = _remover_acentos(termo.upper().strip())
     if t in texto_limpo:
         return True
-    t_sem_espacos = t.replace(' ', '')
-    texto_sem_espacos = texto_limpo.replace(' ', '')
+    t_sem_espacos = t.replace(" ", "")
+    texto_sem_espacos = texto_limpo.replace(" ", "")
     if t_sem_espacos in texto_sem_espacos:
         return True
     palavras_termo = t.split()
@@ -414,7 +624,7 @@ def _coletar_evidencias(verificacao: dict, indice: dict) -> dict:
     for termo in verificacao.get("busca_textos", []):
         for conteudo_up, layer, conteudo_orig in indice["todos_textos"]:
             if _match_texto_flexivel(conteudo_up, termo):
-                entrada = f"[{layer}] \"{conteudo_orig[:80]}\""
+                entrada = f'[{layer}] "{conteudo_orig[:80]}"'
                 if entrada not in ocorrencias_texto:
                     ocorrencias_texto.append(entrada)
         if len(ocorrencias_texto) >= 5:
@@ -424,9 +634,14 @@ def _coletar_evidencias(verificacao: dict, indice: dict) -> dict:
     layers_encontrados = []
     layers_ausentes = []
     for termo in layers_esperados:
-        match = any(_match_layer_flexivel(layer_real, termo) for layer_real in layers_presentes_real)
+        match = any(
+            _match_layer_flexivel(layer_real, termo)
+            for layer_real in layers_presentes_real
+        )
         if match:
-            matched = [lr for lr in layers_presentes_real if _match_layer_flexivel(lr, termo)]
+            matched = [
+                lr for lr in layers_presentes_real if _match_layer_flexivel(lr, termo)
+            ]
             layers_encontrados.extend(matched)
         else:
             layers_ausentes.append(termo)
@@ -471,8 +686,9 @@ def _norma_esta_no_chroma(norma_ref: str | None, normas_chroma: set) -> bool:
     if not norma_ref or not normas_chroma:
         return False
 
-    def _norm(s: str) -> str: # normaliza para comparação
-        return re.sub(r'\s+', '', s.upper())
+    def _norm(s: str) -> str:  # normaliza para comparação
+        return re.sub(r"\s+", "", s.upper())
+
     ref_norm = _norm(norma_ref)
     return any(_norm(n) == ref_norm or ref_norm in _norm(n) for n in normas_chroma)
 
@@ -489,8 +705,8 @@ def _remover_acentos(texto: str) -> str:
 
 def _normalizar_para_comparacao(nome: str) -> str:
     s = _remover_acentos(nome.upper().strip())
-    s = re.sub(r'[-_./\s]+', ' ', s)
-    s = re.sub(r'\s+', ' ', s).strip()
+    s = re.sub(r"[-_./\s]+", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
     return s
 
 
@@ -524,9 +740,15 @@ def _match_layer_flexivel(layer_real: str, termo_busca: str) -> bool:
 def _validar_valores(verificacao_id: str, evidencias: dict) -> dict:
     regra = REGRAS_VALORES.get(verificacao_id)
     if not regra:
-        return {"ok": False, "detalhe": "Sem regra de validação definida.", "valores": []}
+        return {
+            "ok": False,
+            "detalhe": "Sem regra de validação definida.",
+            "valores": [],
+        }
 
-    textos_limpos = [_limpar_texto_dxf(e) for e in evidencias.get("ocorrencias_texto", [])]
+    textos_limpos = [
+        _limpar_texto_dxf(e) for e in evidencias.get("ocorrencias_texto", [])
+    ]
     textos_concat = " ".join(textos_limpos)
     tipo = regra["tipo"]
 
@@ -534,7 +756,11 @@ def _validar_valores(verificacao_id: str, evidencias: dict) -> dict:
         encontrados = [c for c in regra["campos"] if c in textos_concat]
         return {
             "ok": len(encontrados) > 0,
-            "detalhe": f"Termos encontrados: {encontrados}" if encontrados else f"Nenhum dos termos {regra['campos']} encontrado.",
+            "detalhe": (
+                f"Termos encontrados: {encontrados}"
+                if encontrados
+                else f"Nenhum dos termos {regra['campos']} encontrado."
+            ),
             "valores": encontrados,
         }
 
@@ -550,7 +776,11 @@ def _validar_valores(verificacao_id: str, evidencias: dict) -> dict:
         matches = re.findall(regra["padrao"], textos_concat)
         return {
             "ok": len(matches) > 0,
-            "detalhe": f"Padrões encontrados: {matches}" if matches else "Nenhum padrão identificado nos textos.",
+            "detalhe": (
+                f"Padrões encontrados: {matches}"
+                if matches
+                else "Nenhum padrão identificado nos textos."
+            ),
             "valores": matches,
         }
 
@@ -570,7 +800,11 @@ def _validar_valores(verificacao_id: str, evidencias: dict) -> dict:
             except (ValueError, TypeError):
                 pass
         if not valores_num:
-            return {"ok": False, "detalhe": "Nenhum valor numérico identificado nos textos.", "valores": []}
+            return {
+                "ok": False,
+                "detalhe": "Nenhum valor numérico identificado nos textos.",
+                "valores": [],
+            }
         max_val = max(valores_num)
         atende = max_val >= regra["minimo"]
         return {
@@ -582,7 +816,9 @@ def _validar_valores(verificacao_id: str, evidencias: dict) -> dict:
     return {"ok": False, "detalhe": "Tipo de regra desconhecido.", "valores": []}
 
 
-def _avaliar_evidencia_forte(verificacao_id: str, evidencias: dict, valor_check: dict) -> dict | None:
+def _avaliar_evidencia_forte(
+    verificacao_id: str, evidencias: dict, valor_check: dict
+) -> dict | None:
     tem_textos = len(evidencias["ocorrencias_texto"]) > 0
     tem_layers = len(evidencias["layers_encontrados"]) > 0
     layers_aus = len(evidencias["layers_ausentes"])
@@ -619,7 +855,9 @@ def _avaliar_evidencia_forte(verificacao_id: str, evidencias: dict, valor_check:
     return None
 
 
-def _avaliar_com_llm(llm, verificacao: dict, contexto_norma: str, resumo: str, evidencias: dict) -> dict:
+def _avaliar_com_llm(
+    llm, verificacao: dict, contexto_norma: str, resumo: str, evidencias: dict
+) -> dict:
     tem_textos = len(evidencias["ocorrencias_texto"]) > 0
     tem_layers = len(evidencias["layers_encontrados"]) > 0
     layers_aus = ", ".join(evidencias["layers_ausentes"]) or "nenhum"
@@ -640,13 +878,21 @@ def _avaliar_com_llm(llm, verificacao: dict, contexto_norma: str, resumo: str, e
 
     valor_check = _validar_valores(verificacao["id"], evidencias)
 
-    avaliacao_forte = _avaliar_evidencia_forte(verificacao["id"], evidencias, valor_check)
+    avaliacao_forte = _avaliar_evidencia_forte(
+        verificacao["id"], evidencias, valor_check
+    )
     if avaliacao_forte is not None:
         return avaliacao_forte
 
-    ocorrencias_str = "\n".join(evidencias["ocorrencias_texto"]) or "Nenhum texto encontrado."
+    ocorrencias_str = (
+        "\n".join(evidencias["ocorrencias_texto"]) or "Nenhum texto encontrado."
+    )
     layers_enc = ", ".join(evidencias["layers_encontrados"]) or "nenhum"
-    valores_info = f"Validação automática: {valor_check['detalhe']}" if valor_check else "Sem validação automática."
+    valores_info = (
+        f"Validação automática: {valor_check['detalhe']}"
+        if valor_check
+        else "Sem validação automática."
+    )
 
     prompt = f"""Você é um auditor técnico de normas elétricas brasileiras.
 
@@ -673,27 +919,42 @@ Responda SOMENTE este JSON, sem texto antes ou depois:
 
     resposta_raw = llm.invoke(prompt)
 
-    resposta_limpa = re.sub(r'<think>.*?</think>', '', resposta_raw, flags=re.DOTALL).strip()
+    resposta_limpa = re.sub(
+        r"<think>.*?</think>", "", resposta_raw, flags=re.DOTALL
+    ).strip()
 
     try:
         match = re.search(r'\{[^{}]*"status"[^{}]*\}', resposta_limpa, re.DOTALL)
         if match:
             resultado = json.loads(match.group())
             if resultado.get("status") in ("CONFORME", "NÃO CONFORME", "INCONCLUSIVO"):
-                if resultado.get("status") == "INCONCLUSIVO" and not tem_textos and not tem_layers:
+                if (
+                    resultado.get("status") == "INCONCLUSIVO"
+                    and not tem_textos
+                    and not tem_layers
+                ):
                     resultado["status"] = "NÃO CONFORME"
-                    resultado["justificativa"] = "Nenhum texto comprobatório encontrado. " + resultado.get("justificativa", "")
+                    resultado["justificativa"] = (
+                        "Nenhum texto comprobatório encontrado. "
+                        + resultado.get("justificativa", "")
+                    )
                 return resultado
     except Exception:
         pass
 
     try:
-        status_match = re.search(r'"status"\s*:\s*"(CONFORME|NÃO CONFORME|INCONCLUSIVO)"', resposta_limpa)
+        status_match = re.search(
+            r'"status"\s*:\s*"(CONFORME|NÃO CONFORME|INCONCLUSIVO)"', resposta_limpa
+        )
         just_match = re.search(r'"justificativa"\s*:\s*"([^"]{10,})', resposta_limpa)
         if status_match:
             return {
                 "status": status_match.group(1),
-                "justificativa": just_match.group(1)[:300] if just_match else "Extraído parcialmente.",
+                "justificativa": (
+                    just_match.group(1)[:300]
+                    if just_match
+                    else "Extraído parcialmente."
+                ),
                 "recomendacao": "",
             }
     except Exception:
@@ -719,20 +980,31 @@ Responda SOMENTE este JSON, sem texto antes ou depois:
         }
 
 
-def _gerar_relatorio(resultados: list, extracao: dict, normas_utilizadas: set = None, sem_normas: bool = False) -> str:
-    nome_arquivo = Path(extracao.get('arquivo', 'desconhecido')).name
+def _gerar_relatorio(
+    resultados: list,
+    extracao: dict,
+    normas_utilizadas: set = None,
+    sem_normas: bool = False,
+) -> str:
+    nome_arquivo = Path(extracao.get("arquivo", "desconhecido")).name
     data_hora = datetime.now().strftime("%d/%m/%Y %H:%M")
 
     conformes = sum(1 for r in resultados if r["avaliacao"]["status"] == "CONFORME")
-    nao_conformes = sum(1 for r in resultados if r["avaliacao"]["status"] == "NÃO CONFORME")
-    inconclusivos = sum(1 for r in resultados if r["avaliacao"]["status"] == "INCONCLUSIVO")
+    nao_conformes = sum(
+        1 for r in resultados if r["avaliacao"]["status"] == "NÃO CONFORME"
+    )
+    inconclusivos = sum(
+        1 for r in resultados if r["avaliacao"]["status"] == "INCONCLUSIVO"
+    )
     total = len(resultados)
 
     icone = {"CONFORME": "✅", "NÃO CONFORME": "❌", "INCONCLUSIVO": "⚠️"}
 
-    if sem_normas or not normas_utilizadas: # se não tiver normas, marca como não conforme
+    if (
+        sem_normas or not normas_utilizadas
+    ):  # se não tiver normas, marca como não conforme
         normas_str = "⚠️ Nenhuma norma indexada — conferência normativa não realizada"
-    else: # se tiver normas, lista elas
+    else:  # se tiver normas, lista elas
         normas_str = ", ".join(sorted(normas_utilizadas))
 
     linhas = [
@@ -745,8 +1017,7 @@ def _gerar_relatorio(resultados: list, extracao: dict, normas_utilizadas: set = 
         "",
     ]
 
-
-    if sem_normas: # se não tiver normas, marca como não conforme
+    if sem_normas:  # se não tiver normas, marca como não conforme
         linhas += [
             "> ⚠️ **ATENÇÃO:** Este relatório foi gerado **sem conferência com nenhuma norma técnica** (NBR/NR).",
             "> Nenhum documento normativo está indexado na base de conhecimento (ChromaDB).",
@@ -793,10 +1064,14 @@ def _gerar_relatorio(resultados: list, extracao: dict, normas_utilizadas: set = 
             ev = item.get("evidencias", {})
 
             if ev.get("layers_encontrados"):
-                linhas.append(f"**Layers confirmados:** {', '.join(f'`{l}`' for l in ev['layers_encontrados'])}")
+                linhas.append(
+                    f"**Layers confirmados:** {', '.join(f'`{l}`' for l in ev['layers_encontrados'])}"
+                )
 
             if ev.get("layers_ausentes"):
-                linhas.append(f"**Layers não encontrados:** {', '.join(f'`{l}`' for l in ev['layers_ausentes'])}")
+                linhas.append(
+                    f"**Layers não encontrados:** {', '.join(f'`{l}`' for l in ev['layers_ausentes'])}"
+                )
 
             if ev.get("ocorrencias_texto"):
                 linhas.append("")
@@ -808,8 +1083,8 @@ def _gerar_relatorio(resultados: list, extracao: dict, normas_utilizadas: set = 
 
     obs_normas = (
         "- **Base normativa ausente:** nenhuma NBR/NR estava indexada. Conferência normativa **não foi realizada**."
-        if sem_normas else
-        f"- Normas consultadas na base ChromaDB: {normas_str}."
+        if sem_normas
+        else f"- Normas consultadas na base ChromaDB: {normas_str}."
     )
 
     linhas += [

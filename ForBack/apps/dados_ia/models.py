@@ -4,11 +4,6 @@ from django.db import models
 from apps.projetos.models import Projeto, Norma, Arquivo
 
 class DadosExtraidos(models.Model):
-    """
-    Objetivo: Armazenar o resultado da extração pesada de coordenadas e geometrias.
-    Recebe: O ID do arquivo DXF de origem e uma estrutura complexa de dados (JSON).
-    Uso: Para economizar espaço, os dados são comprimidos com zlib antes de serem salvos no banco.
-    """
     id_dados = models.AutoField(primary_key=True)
     arquivo = models.ForeignKey(
         Arquivo,
@@ -16,7 +11,6 @@ class DadosExtraidos(models.Model):
         db_column="arquivo_id"
     )
     
-    # Campo binário para armazenar o JSON comprimido (mais leve que texto puro)
     dados_binarios = models.BinaryField(null=True, blank=True)
 
     class Meta:
@@ -24,25 +18,18 @@ class DadosExtraidos(models.Model):
 
     @property
     def dados(self):
-        """Propriedade para acessar os dados descomprimidos automaticamente."""
         if not self.dados_binarios:
             return None
         return json.loads(zlib.decompress(self.dados_binarios).decode('utf-8'))
 
     @dados.setter
     def dados(self, value):
-        """Seta os dados comprimindo-os para zlib antes de salvar no banco."""
         if value:
             self.dados_binarios = zlib.compress(json.dumps(value).encode('utf-8'))
         else:
             self.dados_binarios = None
 
 class LogValidacao(models.Model):
-    """
-    Objetivo: Registrar o histórico de auditoria da IA sobre o projeto.
-    Recebe: Vínculo com o projeto, a norma aplicada (NBR) e o resultado da validação (JSON).
-    Uso: Permite ao usuário ver por que a IA aprovou ou reprovou certos elementos técnicos.
-    """
     id_log = models.AutoField(primary_key=True)
     projeto = models.ForeignKey(
         Projeto,
@@ -60,11 +47,6 @@ class LogValidacao(models.Model):
         db_table = "logs_validacao"
 
 class DadosInseridosManualmente(models.Model):
-    """
-    Objetivo: Armazenar ajustes e dados técnicos fornecidos diretamente pelo usuário.
-    Recebe: Vínculo com o projeto e os dados customizados (JSON).
-    Uso: Essencial para garantir que a vontade do projetista sobreponha a IA quando necessário.
-    """
     id_dados = models.AutoField(primary_key=True)
     projeto = models.ForeignKey(
         Projeto,

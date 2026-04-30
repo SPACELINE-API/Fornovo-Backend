@@ -4,16 +4,12 @@ import time
 import urllib.request
 import os
 
-MODELOS = ['nomic-embed-text', 'llama3.1:8b']
+MODELOS = ["nomic-embed-text", "minimax-m2.7:cloud"]
 
 
 def ollama_instalado() -> bool:
     try:
-        result = subprocess.run(
-            ['ollama', '-v'],
-            capture_output=True,
-            text=True
-        )
+        result = subprocess.run(["ollama", "-v"], capture_output=True, text=True)
         return result.returncode == 0
     except FileNotFoundError:
         return False
@@ -28,11 +24,7 @@ def ollama_rodando() -> bool:
 
 
 def modelos_instalados() -> bool:
-    result = subprocess.run(
-        ["ollama", "list"],
-        capture_output=True,
-        text=True
-    )
+    result = subprocess.run(["ollama", "list"], capture_output=True, text=True)
     output = result.stdout.lower()
     return all(m.lower() in output for m in MODELOS)
 
@@ -40,8 +32,12 @@ def modelos_instalados() -> bool:
 def ensure_ollama_ready():
     if not ollama_instalado():
         print("Instalando Ollama")
-        installer_path = os.path.join(os.environ.get("TEMP", "C:\\Temp"), "OllamaSetup.exe")
-        urllib.request.urlretrieve("https://ollama.com/download/OllamaSetup.exe", installer_path)
+        installer_path = os.path.join(
+            os.environ.get("TEMP", "C:\\Temp"), "OllamaSetup.exe"
+        )
+        urllib.request.urlretrieve(
+            "https://ollama.com/download/OllamaSetup.exe", installer_path
+        )
         subprocess.run([installer_path, "/SILENT"], check=True)
 
     if not ollama_rodando():
@@ -60,17 +56,17 @@ def ensure_ollama_ready():
 
 
 def ensure_ollama_cuda() -> dict:
-    gpu_info = {
-        "cuda_active": False,
-        "gpu_name": None,
-        "vram_mb": None
-    }
+    gpu_info = {"cuda_active": False, "gpu_name": None, "vram_mb": None}
 
     try:
         result = subprocess.run(
-            ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"],
+            [
+                "nvidia-smi",
+                "--query-gpu=name,memory.total",
+                "--format=csv,noheader,nounits",
+            ],
             capture_output=True,
-            text=True
+            text=True,
         )
 
         if result.returncode != 0 or not result.stdout.strip():

@@ -17,14 +17,6 @@ from django.db import transaction
 import json
 from rest_framework.parsers import MultiPartParser
 
-try:
-    from apps.dados_ia.services.memorial.levantamento_campo import (
-    extrair_levantamento_campo_para_xlsx,
-    mesclar_form_com_dxf,
-)
-except ImportError:
-    extrair_levantamento_campo_para_xlsx = None
-
 def to_int(value):
     return int(value) if value not in ["", None] else 0
 

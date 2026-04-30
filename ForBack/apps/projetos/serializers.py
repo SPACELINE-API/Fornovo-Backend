@@ -23,11 +23,6 @@ class ProjetoSerializer(serializers.ModelSerializer):
 
 
 class EspecificacaoIASerializer(serializers.ModelSerializer):
-    """
-    Serializer completo para EspecificacaoIA.
-    - `arquivo_url`: URL pública para download via /media/ (CA.4).
-    - `projeto_nome`: nome legível do projeto vinculado (RN.1).
-    """
     arquivo_url = serializers.SerializerMethodField()
     projeto_nome = serializers.CharField(source='projeto.nome_projeto', read_only=True)
 

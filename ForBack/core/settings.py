@@ -87,9 +87,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-
-# Banco de Dados
-
 load_dotenv()
 DATABASES = {
     'default': {
@@ -102,10 +99,9 @@ DATABASES = {
     }
 }
 
-# Arquivos enviados pelo usuário (uploads)
 
-MEDIA_URL = '/media/' # Caminho da URL no navegador
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media') # Caminho no computador
+MEDIA_URL = '/media/' 
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -138,5 +134,4 @@ REST_FRAMEWORK = {
     ),
 }
 
-# Configurações de CORS (Para permitir acesso do Frontend)
-CORS_ALLOW_ALL_ORIGINS = True # Em produção, devemos especificar os domínios permitidos
+CORS_ALLOW_ALL_ORIGINS = True 
