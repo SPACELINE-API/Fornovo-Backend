@@ -133,7 +133,7 @@ class ProjetoUpdate(APIView):
                 status=404
             )
 
-class uploadArquivo(APIView): # POST Arquivo
+class uploadArquivo(APIView): 
     permission_classes = [IsAuthenticated, IsAdmOrProjetista]
 
     def post(self, request):
@@ -201,7 +201,7 @@ class verificarArquivo(APIView):
             status=200
         )
 
-class buscarArquivo(APIView): # GET Arquivo
+class buscarArquivo(APIView): 
     permission_classes = [IsAuthenticated]
     def get(self, request, projeto_id):
         try:
@@ -218,13 +218,11 @@ class buscarArquivo(APIView): # GET Arquivo
 
             baixar = request.GET.get("download") == "1"
 
-            # pega extensão do arquivo
             extensao = arquivo.nome_arquivo.split(".")[-1].lower()
 
             if extensao in ["dwg", "dxf"]:
                 baixar = True
 
-            # define o tipo
             if extensao == "pdf":
                 content_type = "application/pdf"
             else:
@@ -244,7 +242,7 @@ class buscarArquivo(APIView): # GET Arquivo
             )
         
 class deletarArquivo(APIView):
-    permission_classes = [IsAuthenticated, IsAdm]
+    permission_classes = [IsAuthenticated]
 
     def delete(self, request, id):
         try:
@@ -283,7 +281,6 @@ class UploadEspecificacao(APIView):
         versao = request.data.get('versao', '1.0')
         descricao = request.data.get('descricao', '')
 
-        # --- Validações básicas ---
         if not arquivo:
             return Response({'erro': 'Nenhum arquivo enviado.'}, status=400)
 
@@ -293,7 +290,6 @@ class UploadEspecificacao(APIView):
         if not titulo:
             return Response({'erro': 'titulo é obrigatório.'}, status=400)
 
-        # Valida extensão — todos os formatos Word são aceitos
         EXTENSOES_WORD = {'docx', 'doc', 'docm', 'dotx', 'dotm', 'dot', 'odt', 'rtf'}
         ext = arquivo.name.rsplit('.', 1)[-1].lower()
         if ext not in EXTENSOES_WORD:
@@ -302,7 +298,6 @@ class UploadEspecificacao(APIView):
                 status=400
             )
 
-        # --- RN.1: projeto deve existir ---
         try:
             projeto = Projeto.objects.get(id_projeto=projeto_id)
         except Projeto.DoesNotExist:
@@ -311,11 +306,10 @@ class UploadEspecificacao(APIView):
                 status=404
             )
 
-        # --- CA.2: salva arquivo em /media/especificacoes/ e CA.3: cria registro ---
         try:
             especificacao = EspecificacaoIA.objects.create(
                 projeto=projeto,
-                arquivo=arquivo,       # Django salva automaticamente em upload_to='especificacoes/'
+                arquivo=arquivo,       
                 titulo=titulo,
                 versao=versao,
                 descricao=descricao,
@@ -342,7 +336,6 @@ class BaixarEspecificacao(APIView):
         except EspecificacaoIA.DoesNotExist:
             return Response({'erro': 'Especificação não encontrada.'}, status=404)
 
-        # ?download=1 → envia o arquivo; caso contrário retorna metadados JSON
         if request.GET.get('download') == '1':
             if not especificacao.arquivo:
                 return Response({'erro': 'Arquivo não encontrado no servidor.'}, status=404)
@@ -430,7 +423,6 @@ class DownloadUltimaEspecificacao(APIView):
         except Projeto.DoesNotExist:
             return Response({'erro': 'Projeto não encontrado.'}, status=404)
 
-        # O modelo EspecificacaoIA tem ordering = ['-gerado_em']
         especificacao = EspecificacaoIA.objects.filter(projeto=projeto).first()
 
         if not especificacao or not especificacao.arquivo:

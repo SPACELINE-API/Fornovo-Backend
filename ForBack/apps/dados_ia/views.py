@@ -13,8 +13,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.parsers import MultiPartParser, JSONParser
 from django.http import FileResponse, HttpResponse, JsonResponse
-import json
-import threading
 import time
 import hashlib
 from django.core.files.base import ContentFile
@@ -26,12 +24,9 @@ from .services import (chroma_normas as agente, oda_installer as oda, extractorD
 from .services.chroma_normas import inserir_norma, apagar_norma
 from .services.ollama_execute import executar_agente
 import json
-from django.http import HttpResponse
 import threading
 from rest_framework import status
-from django.http import FileResponse
 
-from .services.chroma_normas import inserir_norma
 from .utils.relatorio import gerar_docx_bytes
 
 from apps.dados_ia.services.memorial.pandas.builder import gerar_memorial
@@ -62,65 +57,6 @@ def ExtrairSalvarNormas(normas_codigos: list, projeto):
 
     except Exception as e:
         print(f"Erro ao vincular normas: {e}")
-
-class CadastrarDadosExtraidos(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        try:
-            arquivo_id = request.data.get("arquivo")
-            dados = request.data.get("dados")
-            arquivo = Arquivo.objects.get(id_arquivo=arquivo_id)
-            extraido = DadosExtraidos.objects.create(arquivo=arquivo, dados=dados)
-            return Response({"mensagem": "Dados extraídos cadastrados com sucesso", "id": extraido.id_dados}, status=201)
-        except Arquivo.DoesNotExist:
-            return Response({"erro": "Arquivo não encontrado"}, status=404)
-        except Exception as e:
-            return Response({"erro": str(e)}, status=400)
-
-    def get(self, request):
-        dados = DadosExtraidos.objects.all()
-        lista = [
-            {"id_dados": item.id_dados, "arquivo": item.arquivo.id_arquivo, "dados": item.dados}
-            for item in dados
-        ]
-        return Response(lista)
-
-
-class CadastrarLogValidacao(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        try:
-            projeto_id = request.data.get("projeto")
-            norma_id = request.data.get("norma")
-            dados = request.data.get("dados")
-            projeto = Projeto.objects.get(id_projeto=projeto_id)
-            norma = Norma.objects.get(id_norma=norma_id)
-            log = LogValidacao.objects.create(projeto=projeto, norma=norma, dados=dados)
-            return Response({"mensagem": "Log de validação criado com sucesso", "id": log.id_log}, status=201)
-        except Projeto.DoesNotExist:
-            return Response({"erro": "Projeto não encontrado"}, status=404)
-        except Norma.DoesNotExist:
-            return Response({"erro": "Norma não encontrada"}, status=404)
-        except Exception as e:
-            return Response({"erro": str(e)}, status=400)
-
-
-class CadastrarDadosManuais(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        try:
-            projeto_id = request.data.get("projeto")
-            dados = request.data.get("dados")
-            projeto = Projeto.objects.get(id_projeto=projeto_id)
-            manual = DadosInseridosManualmente.objects.create(projeto=projeto, dados=dados)
-            return Response({"mensagem": "Dados manuais inseridos com sucesso", "id": manual.id_dados}, status=201)
-        except Projeto.DoesNotExist:
-            return Response({"erro": "Projeto não encontrado"}, status=404)
-        except Exception as e:
-            return Response({"erro": str(e)}, status=400)
 
 
 class ConverterArquivo(APIView):
@@ -329,7 +265,6 @@ class ProcessarProjetoIA(APIView):
             insights_bd = []
             for item in retorno_ia.get("insights", []):
                 n_codigo = item.get("norma_codigo", "")
-                # Busca a norma diretamente no banco, pois o projeto não tem mais a relação M2M direta
                 norma_obj = Norma.objects.filter(codigo__icontains=n_codigo).first()
                 if not norma_obj:
                     norma_obj = Norma.objects.first()
@@ -554,89 +489,7 @@ class ativarNorma(APIView):
             }, status=500)
 
 
-class ExtrairDadosDXFAPIView(APIView):
-    parser_classes = [MultiPartParser]
-
-    def post(self, request, *args, **kwargs):
-        from .services.memorial.extrair_dados_dxf import extrair_dados_completos_dxf
-
-        try:
-            dxf_file = request.FILES.get("dxf")
-            if not dxf_file:
-                return Response({"erro": "Envie o JSON do DXF no campo 'dxf'."}, status=status.HTTP_400_BAD_REQUEST)
-
-            dados_dxf = json.loads(dxf_file.read().decode("utf-8"))
-            resultado = extrair_dados_completos_dxf(dados_dxf)
-            return Response(resultado, status=status.HTTP_200_OK)
-
-        except json.JSONDecodeError as e:
-            return Response({"erro": "JSON inválido.", "detalhe": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        except Exception as e:
-            import traceback
-            print(traceback.format_exc())
-            return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-class MemorialCalculo(APIView):
-    parser_classes = [MultiPartParser, JSONParser]
-
-    def _parse_json_field(self, request, key):
-        arquivo = request.FILES.get(key)
-        if arquivo:
-            try:
-                return json.loads(arquivo.read().decode("utf-8"))
-            except Exception:
-                pass
-
-        valor = request.data.get(key)
-        if valor is not None:
-            if isinstance(valor, (dict, list)):
-                return valor
-            
-            if isinstance(valor, str):
-                try:
-                    parsed = json.loads(valor)
-                    if isinstance(parsed, str):
-                        parsed = json.loads(parsed)
-                    return parsed
-                except json.JSONDecodeError:
-                    return valor
-                    
-        return None
-
-    def post(self, request, *args, **kwargs):
-        try:
-            dados_arquivo = self._parse_json_field(request, "arquivo")
-            dados_dxf = self._parse_json_field(request, "dxf")
-
-            if not dados_arquivo:
-                return Response({"erro": "Envie o JSON manual no campo 'arquivo'."}, status=status.HTTP_400_BAD_REQUEST)
-            if not dados_dxf:
-                return Response({"erro": "Envie o JSON do DXF no campo 'dxf'."}, status=status.HTTP_400_BAD_REQUEST)
-
-            arquivo = gerar_memorial(dados_arquivo, dados_dxf)
-
-            if not arquivo:
-                return Response({"erro": "Falha na geração do arquivo Excel em memória."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-            response = HttpResponse(
-                arquivo_bytes,
-                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-            response["Content-Disposition"] = 'attachment; filename="memorial_calculo_completo.xlsx"'
-            return response
-
-        except json.JSONDecodeError as e:
-            return Response({"erro": "JSON inválido.", "detalhe": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        except Exception as e:
-            print(traceback.format_exc())
-            return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 class SalvarMemorialCalculo(APIView):
-    """
-    Rota que gera o memorial de cálculo e o salva no banco de dados vinculado ao projeto.
-    """
     parser_classes = [MultiPartParser, JSONParser]
 
     def _parse_json_field(self, request, key):

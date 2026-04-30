@@ -54,12 +54,10 @@ class Projeto(models.Model):
 
     
     def clean(self): 
-        # validação de datas
         if self.data_inicio and self.data_fim:
             if self.data_fim < self.data_inicio:
                 raise ValidationError("A data de fim não pode ser menor que a data de início.")
 
-        # só valida transição se o projeto já existir no banco
         if Projeto.objects.filter(pk=self.pk).exists():
 
             projeto_antigo = Projeto.objects.get(pk=self.pk)
@@ -73,7 +71,6 @@ class Projeto(models.Model):
                         f"Não é permitido mudar de '{status_atual}' para '{novo_status}'."
                     )
     
-    # Essa função serve para valdiar a função clean
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
@@ -94,7 +91,7 @@ class Arquivo(models.Model):
 
     nome_arquivo = models.CharField(max_length=255)
     hash_arquivo = models.CharField(max_length=255, unique=True)
-    caminho_arquivo = models.FileField(upload_to=UploadDeArquivo) # xlsx/docx para memorial/, o resto para cad_arquivos
+    caminho_arquivo = models.FileField(upload_to=UploadDeArquivo) 
     tipo_arquivo = models.CharField(max_length=50)
 
     class Meta:
@@ -118,12 +115,6 @@ class ProjetoNorma(models.Model):
 
 
 class EspecificacaoIA(models.Model):
-    """
-    Representa um documento de especificação gerado por IA (.docx),
-    vinculado a um projeto existente (RN.1).
-    O arquivo é salvo em /media/especificacoes/ (CA.1 / CA.2).
-    Os metadados e o caminho são persistidos no banco (CA.3 / CA.4).
-    """
     id_especificacao = models.AutoField(primary_key=True)
 
     projeto = models.ForeignKey(
@@ -133,10 +124,7 @@ class EspecificacaoIA(models.Model):
         db_column='projeto_id'
     )
 
-    # Caminho do arquivo dentro de /media/ — permite recuperar para download (CA.4)
     arquivo = models.FileField(upload_to='especificacoes/')
-
-    # Metadados da especificação (CA.3)
     titulo = models.CharField(max_length=255)
     versao = models.CharField(max_length=50, default='1.0')
     descricao = models.TextField(null=True, blank=True)
