@@ -1,11 +1,12 @@
 from django.urls import path
 from . import views
-from .views import criarUsuario
+from .views import criarUsuario, listarUsuario, atualizarStatusUsuario, atualizarUsuario, LoginUsuario
 app_name = 'usuarios'
 
 urlpatterns = [
-    path('criarUsuario', criarUsuario.as_view(), name='criarUsuario')
-    
-    # Exemplo: dominio.com/projetos/cadastrar/
-    # path('cadastrar/', views.cadastrar_projeto, name='cadastrar'),
+    path('listarUsuario', listarUsuario.as_view()),
+    path('criarUsuario', criarUsuario.as_view()),
+    path('status/<uuid:id>', atualizarStatusUsuario.as_view()),
+    path('editarUsuario/<uuid:id>', atualizarUsuario.as_view()),
+    path('login', LoginUsuario.as_view(), name='login')
 ]

@@ -66,6 +66,8 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
 ]
 
+CORS_EXPOSE_HEADERS = ["Content-Disposition"]
+
 ROOT_URLCONF = 'core.urls'
 
 TEMPLATES = [
@@ -85,9 +87,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-
-# Banco de Dados
-
 load_dotenv()
 DATABASES = {
     'default': {
@@ -100,10 +99,9 @@ DATABASES = {
     }
 }
 
-# Arquivos enviados pelo usuário (uploads)
 
-MEDIA_URL = '/media/' # Caminho da URL no navegador
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media') # Caminho no computador
+MEDIA_URL = '/media/' 
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -129,3 +127,11 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'apps.usuarios.auth.authentication.CustomJWTAuthentication',
+    ),
+}
+
+CORS_ALLOW_ALL_ORIGINS = True 

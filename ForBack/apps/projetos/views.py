@@ -1,40 +1,43 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from apps.usuarios.auth.permissions import IsAdm, IsProjetista, IsAdmOrProjetista, IsAdmOrRevisor
 from rest_framework.response import Response
-from .models import Projeto, Arquivo
+from .models import Projeto, Arquivo, padraoStatus, EspecificacaoIA
+from django.core.exceptions import ValidationError
 from apps.usuarios.models import Usuario
-from .serializers import ProjetoSerializer
+from .serializers import ProjetoSerializer, EspecificacaoIASerializer
 from django.http import FileResponse
 import hashlib
 
 class cadastrarProjeto(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
+
+        engenheiro_id = request.data.get("engenheiro")
         serializer = ProjetoSerializer(data=request.data)
 
         if serializer.is_valid():
+            try:
 
-            usuario_padrao = Usuario.objects.first()
+                usuario_selecionado = Usuario.objects.get(id_usuario=engenheiro_id)
 
-            if not usuario_padrao:
-                return Response(
-                    {"erro": "Nenhum usuário cadastrado no sistema."},
-                    status=400
-                )
+                serializer.save(engenheiro=usuario_selecionado)
 
-            serializer.save(engenheiro=usuario_padrao)
-
-            return Response({
-                "mensagem": "Projeto criado com sucesso",
-                "dados": serializer.data
-            }, status=201)
+                return Response({
+                        "mensagem": "Projeto criado com sucesso",
+                        "dados": serializer.data
+                    }, status=201)
+            except Usuario.DoesNotExist:
+                return Response({"erro": "O engenheiro selecionado não existe."}, status=400)
+            except Exception as e:
+                return Response({"erro": str(e)}, status=400)
 
         return Response(serializer.errors, status=400)
 
 class listarProjetos(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         projetos = Projeto.objects.all()
@@ -43,7 +46,7 @@ class listarProjetos(APIView):
         return Response(serializer.data)   
 
 class buscarProjeto(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, id_projeto):
         projeto = Projeto.objects.get(id_projeto = id_projeto)
@@ -52,7 +55,7 @@ class buscarProjeto(APIView):
         return Response(serializer.data) 
 
 class ProjetoDelete(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def delete(self, request, id_projeto):
         try:
@@ -65,9 +68,44 @@ class ProjetoDelete(APIView):
                 {"erro": "Projeto não encontrado"},
                 status=404
             )
+
+class AtualizarStatusProjeto(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, id_projeto):
+        try:
+            projeto = Projeto.objects.get(id_projeto=id_projeto)
+
+            novo_status = request.data.get("status")
+
+            if novo_status not in dict(padraoStatus):
+                return Response(
+                    {"erro": "Status inválido"},
+                    status=400
+                )
+
+            projeto.status = novo_status
+            projeto.save()
+
+            return Response({
+                "mensagem": "Status atualizado com sucesso",
+                "dados": ProjetoSerializer(projeto).data
+            }, status=200)
+
+        except Projeto.DoesNotExist:
+            return Response(
+                {"erro": "Projeto não encontrado"},
+                status=404
+            )
+
+        except ValidationError as e:
+            return Response(
+                {"erro": str(e)},
+                status=400
+            )
         
 class ProjetoUpdate(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def patch(self, request, id_projeto):
         try:
@@ -95,8 +133,8 @@ class ProjetoUpdate(APIView):
                 status=404
             )
 
-class uploadArquivo(APIView): # POST Arquivo
-    permission_classes = [AllowAny]
+class uploadArquivo(APIView): 
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
@@ -139,7 +177,7 @@ class uploadArquivo(APIView): # POST Arquivo
             return Response({"erro": str(e)}, status=400)        
 
 class verificarArquivo(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, id_projeto):
         arquivo = Arquivo.objects.filter(
@@ -163,7 +201,8 @@ class verificarArquivo(APIView):
             status=200
         )
 
-class buscarArquivo(APIView): # GET Arquivo
+class buscarArquivo(APIView): 
+    permission_classes = [IsAuthenticated]
     def get(self, request, projeto_id):
         try:
             arquivo = Arquivo.objects.filter(projeto_id=projeto_id).first()
@@ -179,14 +218,11 @@ class buscarArquivo(APIView): # GET Arquivo
 
             baixar = request.GET.get("download") == "1"
 
-            # pega extensão do arquivo
             extensao = arquivo.nome_arquivo.split(".")[-1].lower()
 
-            # arquivos CAD sempre baixam, pra evitar bugs
             if extensao in ["dwg", "dxf"]:
                 baixar = True
 
-            # define o tipo
             if extensao == "pdf":
                 content_type = "application/pdf"
             else:
@@ -206,7 +242,7 @@ class buscarArquivo(APIView): # GET Arquivo
             )
         
 class deletarArquivo(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def delete(self, request, id):
         try:
@@ -222,7 +258,7 @@ class deletarArquivo(APIView):
             return Response({"erro": "Arquivo não encontrado"}, status=404)
         
 class VerificarStatusIA(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, id_projeto):
         try:
@@ -233,3 +269,186 @@ class VerificarStatusIA(APIView):
             })
         except Projeto.DoesNotExist:
             return Response({"erro": "Projeto não encontrado"}, status=404)
+
+
+class UploadEspecificacao(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        arquivo = request.FILES.get('arquivo')
+        projeto_id = request.data.get('projeto_id')
+        titulo = request.data.get('titulo')
+        versao = request.data.get('versao', '1.0')
+        descricao = request.data.get('descricao', '')
+
+        if not arquivo:
+            return Response({'erro': 'Nenhum arquivo enviado.'}, status=400)
+
+        if not projeto_id:
+            return Response({'erro': 'projeto_id é obrigatório.'}, status=400)
+
+        if not titulo:
+            return Response({'erro': 'titulo é obrigatório.'}, status=400)
+
+        EXTENSOES_WORD = {'docx', 'doc', 'docm', 'dotx', 'dotm', 'dot', 'odt', 'rtf'}
+        ext = arquivo.name.rsplit('.', 1)[-1].lower()
+        if ext not in EXTENSOES_WORD:
+            return Response(
+                {'erro': f"Extensão '{ext}' não permitida. Formatos aceitos: {', '.join(sorted(EXTENSOES_WORD))}."},
+                status=400
+            )
+
+        try:
+            projeto = Projeto.objects.get(id_projeto=projeto_id)
+        except Projeto.DoesNotExist:
+            return Response(
+                {'erro': 'Projeto não encontrado. A especificação deve estar vinculada a um projeto existente.'},
+                status=404
+            )
+
+        try:
+            especificacao = EspecificacaoIA.objects.create(
+                projeto=projeto,
+                arquivo=arquivo,       
+                titulo=titulo,
+                versao=versao,
+                descricao=descricao,
+            )
+        except Exception as e:
+            return Response({'erro': f'Erro ao salvar especificação: {str(e)}'}, status=500)
+
+        serializer = EspecificacaoIASerializer(especificacao, context={'request': request})
+        return Response(
+            {
+                'mensagem': 'Especificação salva com sucesso.',
+                'dados': serializer.data,
+            },
+            status=201
+        )
+
+
+class BaixarEspecificacao(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id_especificacao):
+        try:
+            especificacao = EspecificacaoIA.objects.get(id_especificacao=id_especificacao)
+        except EspecificacaoIA.DoesNotExist:
+            return Response({'erro': 'Especificação não encontrada.'}, status=404)
+
+        if request.GET.get('download') == '1':
+            if not especificacao.arquivo:
+                return Response({'erro': 'Arquivo não encontrado no servidor.'}, status=404)
+            nome_arquivo = especificacao.arquivo.name.split('/')[-1]
+            ext_download = nome_arquivo.rsplit('.', 1)[-1].lower()
+            CONTENT_TYPES = {
+                'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'docm': 'application/vnd.ms-word.document.macroEnabled.12',
+                'dotx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+                'dotm': 'application/vnd.ms-word.template.macroEnabled.12',
+                'dot':  'application/msword',
+                'doc':  'application/msword',
+                'odt':  'application/vnd.oasis.opendocument.text',
+                'rtf':  'application/rtf',
+            }
+            content_type = CONTENT_TYPES.get(ext_download, 'application/octet-stream')
+            return FileResponse(
+                especificacao.arquivo.open('rb'),
+                as_attachment=True,
+                filename=nome_arquivo,
+                content_type=content_type
+            )
+
+        serializer = EspecificacaoIASerializer(especificacao, context={'request': request})
+        return Response(serializer.data, status=200)
+
+
+class ListarEspecificacoes(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id_projeto):
+        try:
+            projeto = Projeto.objects.get(id_projeto=id_projeto)
+        except Projeto.DoesNotExist:
+            return Response({'erro': 'Projeto não encontrado.'}, status=404)
+
+        especificacoes = EspecificacaoIA.objects.filter(projeto=projeto)
+        serializer = EspecificacaoIASerializer(
+            especificacoes, many=True, context={'request': request}
+        )
+        return Response(serializer.data, status=200)
+
+
+class DownloadEspecificacao(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id_especificacao):
+        try:
+            especificacao = EspecificacaoIA.objects.get(id_especificacao=id_especificacao)
+        except EspecificacaoIA.DoesNotExist:
+            return Response({'erro': 'Especificação não encontrada.'}, status=404)
+
+        if not especificacao.arquivo:
+            return Response({'erro': 'Arquivo físico não encontrado no servidor.'}, status=404)
+
+        nome_arquivo = especificacao.arquivo.name.split('/')[-1]
+        ext = nome_arquivo.rsplit('.', 1)[-1].lower()
+
+        CONTENT_TYPES = {
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'docm': 'application/vnd.ms-word.document.macroEnabled.12',
+            'dotx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+            'dotm': 'application/vnd.ms-word.template.macroEnabled.12',
+            'dot':  'application/msword',
+            'doc':  'application/msword',
+            'odt':  'application/vnd.oasis.opendocument.text',
+            'rtf':  'application/rtf',
+        }
+        content_type = CONTENT_TYPES.get(ext, 'application/octet-stream')
+
+        return FileResponse(
+            especificacao.arquivo.open('rb'),
+            as_attachment=True,
+            filename=nome_arquivo,
+            content_type=content_type
+        )
+
+
+class DownloadUltimaEspecificacao(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id_projeto):
+        try:
+            projeto = Projeto.objects.get(id_projeto=id_projeto)
+        except Projeto.DoesNotExist:
+            return Response({'erro': 'Projeto não encontrado.'}, status=404)
+
+        especificacao = EspecificacaoIA.objects.filter(projeto=projeto).first()
+
+        if not especificacao or not especificacao.arquivo:
+            return Response(
+                {'erro': 'Nenhuma especificação encontrada ou arquivo ausente para este projeto.'},
+                status=404
+            )
+
+        nome_arquivo = especificacao.arquivo.name.split('/')[-1]
+        ext = nome_arquivo.rsplit('.', 1)[-1].lower()
+
+        CONTENT_TYPES = {
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'docm': 'application/vnd.ms-word.document.macroEnabled.12',
+            'dotx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+            'dotm': 'application/vnd.ms-word.template.macroEnabled.12',
+            'dot':  'application/msword',
+            'doc':  'application/msword',
+            'odt':  'application/vnd.oasis.opendocument.text',
+            'rtf':  'application/rtf',
+        }
+        content_type = CONTENT_TYPES.get(ext, 'application/octet-stream')
+
+        return FileResponse(
+            especificacao.arquivo.open('rb'),
+            as_attachment=True,
+            filename=nome_arquivo,
+            content_type=content_type
+        )
