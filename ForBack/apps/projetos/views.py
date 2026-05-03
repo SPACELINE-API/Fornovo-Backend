@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from apps.usuarios.auth.permissions import IsAdm, IsProjetista, IsAdmOrProjetista, IsAdmOrRevisor
+from apps.usuarios.auth.permissions import IsAdm
 from rest_framework.response import Response
 from .models import Projeto, Arquivo, padraoStatus, EspecificacaoIA
 from django.core.exceptions import ValidationError
