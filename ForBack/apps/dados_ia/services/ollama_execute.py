@@ -489,13 +489,13 @@ def executar_agente(dados_extracao: dict) -> str:
             f"          Evidências: {textos_found} texto(s) | {layers_found} layer(s) encontrado(s): {evidencias['layers_encontrados']} | {layers_miss} layer(s) ausente(s): {evidencias['layers_ausentes']}"
         )
 
-        if chroma_vazio:  # se o chroma tiver vazio, marca tudo como não conforme
+        if chroma_vazio:  
             avaliacao = {
                 "status": "NÃO CONFORME",
                 "justificativa": "Nenhuma norma técnica está indexada na base de conhecimento (ChromaDB vazio). Não foi possível realizar a conferência normativa.",
                 "recomendacao": "Adicione os documentos das NBRs/NRs ao ChromaDB e execute a análise novamente.",
             }
-        else:  # se o chroma não estiver vazio
+        else:  
 
             norma_ref_match = re.search(
                 r"(NBR\s*\d+(?:[/-]\d+)?|NR-\d+)", verif["query_norma"], re.IGNORECASE
@@ -506,7 +506,7 @@ def executar_agente(dados_extracao: dict) -> str:
 
             if (
                 not norma_presente
-            ):  # se a norma não estiver no chroma, marca como não conforme
+            ):  
 
                 norma_label = norma_ref or "norma não identificada"
                 avaliacao = {
@@ -720,10 +720,19 @@ def _norma_esta_no_chroma(norma_ref: str | None, normas_chroma: set) -> bool:
     ref_norm = _norm(norma_ref)
     return any(_norm(n) == ref_norm or ref_norm in _norm(n) for n in normas_chroma)
 
+_CHROMA_CACHE = {}
 
 def _consultar_norma(query: str, db: Chroma, k: int = 5) -> str:
+    key = (query.strip().lower(), k)
+
+    if key in _CHROMA_CACHE:
+        return _CHROMA_CACHE[key]
+
     docs = db.similarity_search(query, k=k)
-    return "\n\n---\n\n".join(d.page_content[:600] for d in docs)
+    resultado = "\n\n---\n\n".join(d.page_content[:600] for d in docs)
+
+    _CHROMA_CACHE[key] = resultado
+    return resultado
 
 
 def _remover_acentos(texto: str) -> str:
