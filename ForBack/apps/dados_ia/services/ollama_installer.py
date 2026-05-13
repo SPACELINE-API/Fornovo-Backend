@@ -42,7 +42,13 @@ def ensure_ollama_ready():
 
     if not ollama_rodando():
         print("Iniciando Ollama")
-        subprocess.Popen("ollama serve", shell=True)
+        subprocess.Popen(
+            ["ollama", "serve"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
 
         for _ in range(10):
             if ollama_rodando():
