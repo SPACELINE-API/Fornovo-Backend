@@ -311,6 +311,46 @@ VERIFICACOES = [
         ],
         "busca_layers": ["ELE-TEXTOS", "TEXTOS", "NOTAS", "Elétrica"],
     },
+    {
+        "id": "EST-01",
+        "categoria": "Fundações",
+        "descricao": "Presença e dimensionamento de elementos de fundação (Sapatas/Estacas)",
+        "query_norma": "projeto fundações sapatas estacas profundidade mínima assentamento NBR 6122",
+        "busca_textos": ["SAPATA", "ESTACA", "BLOCO", "FUNDAÇÃO", "NÍVEL DE ASSENTAMENTO"],
+        "busca_layers": ["Estrutural - Fundações"]
+    },
+    {
+        "id": "EST-02",
+        "categoria": "Superestrutura - Pilares",
+        "descricao": "Conformidade de pilares (seção mínima e fck)",
+        "query_norma": "pilares concreto armado seção mínima fck agressividade ambiental NBR 6118",
+        "busca_textos": ["PILAR", "P1", "P2", "FCK", "MPA", "SEÇÃO"],
+        "busca_layers": ["Estrutural - Pilares", "BAR-EIXOS"]
+    },
+    {
+        "id": "EST-03",
+        "categoria": "Superestrutura - Vigas",
+        "descricao": "Detalhamento de vigas e armaduras (estribos e bitolas)",
+        "query_norma": "vigas concreto armado detalhamento estribos cobrimento NBR 6118",
+        "busca_textos": ["VIGA", "V1", "ESTRIBO", "BALDRAME", "BITOLA"],
+        "busca_layers": ["Estrutural - Vigas", "EST-VIGAS COBERTURA EXISTENTE"]
+    },
+    {
+        "id": "EST-04",
+        "categoria": "Superestrutura - Lajes",
+        "descricao": "Espessura de lajes e armadura de distribuição",
+        "query_norma": "lajes concreto espessura mínima sobrecarga NBR 6118",
+        "busca_textos": ["LAJE", "L1", "TRELIÇA", "EPS", "CAPA DE CONCRETO"],
+        "busca_layers": ["Estrutural - Lajes"]
+    },
+    {
+        "id": "EST-05",
+        "categoria": "Fechamentos e Alvenaria",
+        "descricao": "Conformidade de alvenaria alta e estrutural",
+        "query_norma": "alvenaria estrutural blocos resistência prisma NBR 16868",
+        "busca_textos": ["ALVENARIA", "BLOCO ESTRUTURAL", "GRAUTE", "PRISMA"],
+        "busca_layers": ["ARQ - Alvenaria Alta", "Arquitetônico - Alvenaria Alta"]
+    }
 ]
 
 REGRAS_VALORES = {
@@ -382,6 +422,9 @@ REGRAS_VALORES = {
         "campos": ["ART", "MEMORIA DE CALCULO", "PROFISSIONAL"],
     },
     "DOC-02": {"tipo": "existe", "campos": ["PROJETO BASICO", "VALIDACAO"]},
+    "EST-02": {"tipo": "existe", "campos": ["PILAR", "P1", "P2", "FCK"]},
+    "EST-03": {"tipo": "existe", "campos": ["VIGA", "V1", "ESTRIBO"]},
+    "EST-04": {"tipo": "existe", "campos": ["LAJE", "L1", "EPS"]}
 }
 
 
@@ -561,7 +604,7 @@ def executar_agente(dados_extracao: dict) -> str:
         "insights": resultados,
         "normas_chroma_codigos": sorted(
             normas_utilizadas
-        ),  # códigos extraídos dos metadados do ChromaDB
+        ),  
     }
 
 
@@ -686,8 +729,10 @@ def _norma_esta_no_chroma(norma_ref: str | None, normas_chroma: set) -> bool:
     if not norma_ref or not normas_chroma:
         return False
 
-    def _norm(s: str) -> str:  # normaliza para comparação
-        return re.sub(r"\s+", "", s.upper())
+    def _norm(s: str) -> str:
+        s = _remover_acentos(s.upper())
+        s = re.sub(r"[^A-Z0-9]", "", s)
+        return s
 
     ref_norm = _norm(norma_ref)
     return any(_norm(n) == ref_norm or ref_norm in _norm(n) for n in normas_chroma)
