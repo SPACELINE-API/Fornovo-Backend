@@ -334,6 +334,119 @@ VERIFICACOES = [
         "busca_textos": ["ALVENARIA", "BLOCO", "PRISMA"],
         "busca_layers": ["Arquitetônico - Alvenaria"],
     },
+    {
+        "id": "HIDR-01",
+        "categoria": "Hidrossanitário - Água Fria",
+        "descricao": "Rede de água fria identificada com tubulações e distribuição principal",
+        "query_norma": "NBR 5626 instalação predial água fria tubulação distribuição ramais",
+        "busca_textos": ["ÁGUA FRIA", "AF", "TUBO", "PVC", "RAMAL", "DISTRIBUIÇÃO"],
+        "busca_layers": [
+        "Hidrossanitário - Água Fria",
+        "Hidrossanitário - Mobiliário",
+        "Hidrossanitário - Ventilação"
+        ]
+    },
+    {
+        "id": "HIDR-02",
+        "categoria": "Hidrossanitário - Água Fria",
+        "descricao": "Identificação de pontos de consumo de água fria (lavatórios, chuveiros, torneiras)",
+        "query_norma": "NBR 5626 pontos de consumo instalações hidráulicas prediais",
+        "busca_textos": ["LAVATÓRIO", "CHUVEIRO", "TORNEIRA", "BANCADA", "CONSUMO"],
+        "busca_layers": [
+        "Hidrossanitário - Mobiliário",
+        "Hidrossanitário - Vasos Sanitários",
+        "Hidrossanitário - Água Fria"
+        ]
+    },
+    {
+        "id": "HIDR-03",
+        "categoria": "Hidrossanitário - Esgoto",
+        "descricao": "Sistema de esgoto sanitário com tubulações e coleta identificada",
+        "query_norma": "NBR 8160 sistema predial esgoto sanitário tubulações caixas inspeção",
+        "busca_textos": ["ESGOTO", "COLUNA", "TUBO ESGOTO", "CAIXA", "INSPEÇÃO"],
+        "busca_layers": [
+        "Esgoto",
+        "Hidrossanitário - Esgoto"
+        ]
+    },
+    {
+        "id": "HIDR-04",
+        "categoria": "Hidrossanitário - Esgoto",
+        "descricao": "Caixas de inspeção e caixas de passagem no sistema de esgoto",
+        "query_norma": "NBR 8160 caixas de inspeção esgoto predial caixas passagem",
+        "busca_textos": ["CAIXA DE INSPEÇÃO", "CAIXA DE PASSAGEM", "CI", "PV"],
+        "busca_layers": [
+        "Esgoto",
+        "Hidrossanitário - Esgoto"
+        ]
+    },
+    {
+        "id": "HIDR-05",
+        "categoria": "Hidrossanitário - Ventilação",
+        "descricao": "Sistema de ventilação do esgoto (tubos de ventilação e colunas)",
+        "query_norma": "NBR 8160 ventilação esgoto tubos ventilação colunas ventilação",
+        "busca_textos": ["VENTILAÇÃO", "TUBO VENT", "COLUNA VENT", "RESPIRO"],
+        "busca_layers": [
+        "Hidrossanitário - Ventilação"
+        ]
+    },
+    {
+        "id": "HIDR-06",
+        "categoria": "Hidrossanitário - Água Pluvial",
+        "descricao": "Sistema de águas pluviais com calhas, condutores e tubulações de drenagem",
+        "query_norma": "NBR 10844 águas pluviais drenagem calhas condutores verticais",
+        "busca_textos": ["PLUVIAL", "CALHA", "CONDUTOR", "ÁGUA DA CHUVA", "DRENAGEM"],
+        "busca_layers": [
+        "Hidrossanitário - Água Pluvial",
+        "Projeção Telhado",
+        "Cotas"
+        ]
+    },
+    {
+        "id": "HIDR-07",
+        "categoria": "Hidrossanitário - Água Quente",
+        "descricao": "Sistema de água quente com tubulações isoladas e identificação de aquecimento",
+        "query_norma": "NBR 5626 instalações água quente tubulação isolamento térmico",
+        "busca_textos": ["ÁGUA QUENTE", "AQ", "AQUECIMENTO", "BOILER", "AQUECEDOR"],
+        "busca_layers": [
+        "Hidrossanitário - Água Quente"
+        ]
+    },
+    {
+        "id": "HIDR-08",
+        "categoria": "Hidrossanitário - Água Fria",
+        "descricao": "Reservação de água (caixas d’água, reservatórios superiores ou inferiores)",
+        "query_norma": "NBR 5626 reservatórios água caixas d'água instalações prediais",
+        "busca_textos": ["CAIXA D'ÁGUA", "RESERVATÓRIO", "TANQUE", "CISTERNA"],
+        "busca_layers": [
+        "Hidrossanitário - Água Fria"
+        ]
+    },
+    {
+        "id": "HIDR-09",
+        "categoria": "Hidrossanitário - Gás Encanado",
+        "descricao": "Rede de gás canalizado com tubulações e pontos de consumo",
+        "query_norma": "NBR 15526 instalações internas gás combustível tubulações GLP GN",
+        "busca_textos": ["GÁS", "GLP", "GN", "TUBO GÁS", "REGISTRO GÁS"],
+        "busca_layers": [
+        "Hidrossanitário - Gás Encanado"
+        ]
+    },
+    {
+        "id": "HIDR-10",
+        "categoria": "Hidrossanitário - Geral",
+        "descricao": "Compatibilização entre sistemas hidráulicos e arquitetura (furos, shafts e passagens)",
+        "query_norma": "NBR 5626 compatibilização shafts passagens instalações hidráulicas",
+        "busca_textos": ["SHAFT", "PASSAGEM", "FURO", "PRUMADA", "DUTO"],
+        "busca_layers": [
+        "ARQ - Alvenaria",
+        "ARQ - Projeções",
+        "Hidrossanitário - Água Fria",
+        "Hidrossanitário - Esgoto",
+        "Hidrossanitário - Água Pluvial"
+        ]
+    }
+    
 ]
 
 REGRAS_VALORES = {
