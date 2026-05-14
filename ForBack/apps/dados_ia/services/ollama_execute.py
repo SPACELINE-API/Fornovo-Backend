@@ -931,28 +931,155 @@ def _avaliar_com_llm(
         else "Sem validação automática."
     )
 
-    prompt = f"""Você é um auditor técnico de normas elétricas brasileiras.
+#     prompt = f"""Você é um auditor técnico de normas elétricas brasileiras.
 
-Avalie o critério abaixo na planta elétrica e retorne APENAS JSON.
+# Avalie o critério abaixo na planta elétrica e retorne APENAS JSON.
 
-CRITÉRIO: {verificacao['descricao']}
+# CRITÉRIO: {verificacao['descricao']}
 
-TRECHO DA NORMA:
-{contexto_norma}
+# TRECHO DA NORMA:
+# {contexto_norma}
 
-EVIDÊNCIAS ENCONTRADAS NA PLANTA:
-Textos: {ocorrencias_str}
-Layers presentes: {layers_enc}
-Layers ausentes: {layers_aus}
-{valores_info}
+# EVIDÊNCIAS ENCONTRADAS NA PLANTA:
+# Textos: {ocorrencias_str}
+# Layers presentes: {layers_enc}
+# Layers ausentes: {layers_aus}
+# {valores_info}
 
-REGRAS DE AVALIAÇÃO:
-- CONFORME: quando há evidência clara de que o requisito foi atendido (layers presentes E textos confirmam valores adequados)
-- NÃO CONFORME: quando não há evidência suficiente, ou os valores encontrados são inferiores ao mínimo da norma
-- INCONCLUSIVO: apenas quando há evidência parcial que não permite conclusão definitiva
+# REGRAS DE AVALIAÇÃO:
+# - CONFORME: quando há evidência clara de que o requisito foi atendido (layers presentes E textos confirmam valores adequados)
+# - NÃO CONFORME: quando não há evidência suficiente, ou os valores encontrados são inferiores ao mínimo da norma
+# - INCONCLUSIVO: apenas quando há evidência parcial que não permite conclusão definitiva
 
-Responda SOMENTE este JSON, sem texto antes ou depois:
-{{"status":"CONFORME"|"NÃO CONFORME"|"INCONCLUSIVO","justificativa":"...","recomendacao":"..."}}"""
+# Responda SOMENTE este JSON, sem texto antes ou depois:
+# {{"status":"CONFORME"|"NÃO CONFORME"|"INCONCLUSIVO","justificativa":"...","recomendacao":"..."}}"""
+
+    prompt = f"""
+    Você é um auditor técnico de normas elétricas brasileiras (ABNT e NR), atuando como sistema de pré-análise para revisão por engenheiro responsável.
+
+    Sua função é analisar critérios técnicos em plantas elétricas com base nas evidências fornecidas e no trecho normativo recuperado via RAG.
+
+    Você NÃO substitui o engenheiro.
+    Você NÃO emite laudo final.
+    Você NÃO deve inventar informações ausentes.
+
+    Seu papel é:
+    - identificar evidências relevantes;
+    - correlacionar com a norma fornecida;
+    - classificar tecnicamente o atendimento do requisito;
+    - priorizar decisão técnica quando houver evidência suficiente, mesmo que parcial.
+
+    ======================================================================
+    DADOS DE ENTRADA
+    ======================================================================
+
+    CRITÉRIO A SER AVALIADO:
+    {verificacao['descricao']}
+
+    TRECHO DA NORMA CONSULTADA:
+    {contexto_norma}
+
+    EVIDÊNCIAS ENCONTRADAS NA PLANTA:
+
+    Textos:
+    {ocorrencias_str}
+
+    Layers presentes:
+    {layers_enc}
+
+    Layers ausentes:
+    {layers_aus}
+
+    {valores_info}
+
+    ======================================================================
+    REGRAS DE AVALIAÇÃO
+    ======================================================================
+
+    1. CONFORME:
+    Deve ser atribuído quando houver evidência suficiente para sustentar atendimento do requisito, incluindo:
+    - evidência explícita (texto técnico ou valor numérico);
+    - combinação coerente de evidências (textos + valores + contexto normativo);
+    - evidência parcial, desde que tecnicamente compatível com a norma.
+
+    Se existir evidência positiva relevante, deve haver tendência à classificação CONFORME, mesmo que a informação não esteja completa.
+
+    2. NÃO CONFORME:
+    Somente pode ser atribuído quando houver evidência objetiva e explícita de violação da norma, como:
+    - valores explicitamente abaixo do exigido pela norma;
+    - presença de elemento incompatível com o requisito normativo;
+    - contradição direta com o trecho normativo consultado;
+    - erro técnico explicitamente indicado nas evidências.
+
+    IMPORTANTE:
+    - NÃO CONFORME NÃO pode ser atribuído por ausência de informação.
+    - NÃO CONFORME NÃO pode ser atribuído por ausência de layers ou ausência de textos.
+    - NÃO CONFORME exige prova positiva de falha.
+
+    3. INCONCLUSIVO (USO RESTRITO):
+    Utilizar apenas quando todas as condições abaixo forem verdadeiras:
+    - não há evidência suficiente positiva ou negativa;
+    - o critério depende de informação inexistente na planta e não inferível;
+    - não é possível correlacionar com a norma mesmo parcialmente.
+
+    INCONCLUSIVO não deve ser usado apenas por ausência de layers ou falta de detalhamento parcial.
+
+    ======================================================================
+    CRITÉRIO DE INTERPRETAÇÃO
+    ======================================================================
+
+    - Evidências textuais e numéricas têm prioridade máxima.
+    - Layers são apenas metadados auxiliares de contexto.
+    - Layers não são evidência normativa e não podem ser usados isoladamente para decisão.
+    - A ausência de layers não deve ser interpretada como não conformidade.
+
+    - A ausência de evidência NÃO pode ser interpretada como NÃO CONFORMIDADE.
+    - É proibido inferir falha técnica com base apenas em “não encontrado”, “não presente” ou “layers ausentes”.
+
+    - NÃO CONFORME só pode ser atribuído com base em evidência positiva de erro ou violação normativa.
+
+    - Não utilize conhecimento externo além da norma fornecida.
+    - Não invente valores, requisitos ou interpretações não suportadas pelas evidências.
+
+    Regra de decisão:
+    - Na dúvida entre CONFORME e INCONCLUSIVO, prefira CONFORME se houver evidência positiva relevante.
+    - Na dúvida entre NÃO CONFORME e INCONCLUSIVO, prefira INCONCLUSIVO.
+    - INCONCLUSIVO é o estado padrão quando não há prova de conformidade nem de não conformidade.
+
+    - O sistema deve priorizar evitar falsos NÃO CONFORMES.
+    - Falsos negativos (marcar como NÃO CONFORME sem prova) são mais graves do que INCONCLUSIVOS.
+
+    ======================================================================
+    USO OBRIGATÓRIO DA NORMA NA JUSTIFICATIVA
+    ======================================================================
+
+    A justificativa deve sempre mencionar explicitamente a norma consultada, por exemplo:
+    - ABNT NBR 5410:2004
+    - ABNT NBR 5419-2:2015
+    - ABNT NBR 6118:2014
+    - NR 10:2004
+
+    A análise deve sempre estar vinculada ao trecho normativo fornecido via RAG.
+
+    ======================================================================
+    INSTRUÇÕES DE SAÍDA
+    ======================================================================
+
+    - Responda somente em JSON válido.
+    - Não inclua texto fora do JSON.
+    - Não cite layers na justificativa.
+    - Não repita o prompt.
+
+    ======================================================================
+    FORMATO DE RESPOSTA OBRIGATÓRIO
+    ======================================================================
+
+    {{
+    "status": "CONFORME | NÃO CONFORME | INCONCLUSIVO",
+    "justificativa": "Explicação técnica objetiva citando explicitamente a norma consultada e as evidências utilizadas.",
+    "recomendacao": "Ação técnica objetiva e acionável."
+    }}
+    """
 
     resposta_raw = llm.invoke(prompt)
 
