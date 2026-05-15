@@ -307,7 +307,7 @@ VERIFICACOES = [
         "categoria": "Estrutural - Pilares",
         "descricao": "Conformidade de pilares",
         "query_norma": "NBR 6118 pilares concreto armado fck seção mínima",
-        "busca_textos": ["PILAR", "FCK", "SEÇÃO"],
+        "busca_textos": ["PILAR", "FCK"],
         "busca_layers": ["Estrutural - Pilares"],
     },
     {
@@ -339,12 +339,8 @@ VERIFICACOES = [
         "categoria": "Hidrossanitário - Água Fria",
         "descricao": "Rede de água fria identificada com tubulações e distribuição principal",
         "query_norma": "NBR 5626 instalação predial água fria tubulação distribuição ramais",
-        "busca_textos": ["ÁGUA FRIA", "AF", "TUBO", "PVC", "RAMAL", "DISTRIBUIÇÃO"],
-        "busca_layers": [
-        "Hidrossanitário - Água Fria",
-        "Hidrossanitário - Mobiliário",
-        "Hidrossanitário - Ventilação"
-        ]
+        "busca_textos": ["ÁGUA FRIA", "TUBO", "PVC", "RAMAL", "DISTRIBUIÇÃO"],
+        "busca_layers": ["Hidrossanitário - Água Fria"]
     },
     {
         "id": "HIDR-02",
@@ -352,33 +348,23 @@ VERIFICACOES = [
         "descricao": "Identificação de pontos de consumo de água fria (lavatórios, chuveiros, torneiras)",
         "query_norma": "NBR 5626 pontos de consumo instalações hidráulicas prediais",
         "busca_textos": ["LAVATÓRIO", "CHUVEIRO", "TORNEIRA", "BANCADA", "CONSUMO"],
-        "busca_layers": [
-        "Hidrossanitário - Mobiliário",
-        "Hidrossanitário - Vasos Sanitários",
-        "Hidrossanitário - Água Fria"
-        ]
+        "busca_layers": ["Hidrossanitário - Mobiliário", "Hidrossanitário - Vasos Sanitários", "Hidrossanitário - Água Fria"]
     },
     {
         "id": "HIDR-03",
         "categoria": "Hidrossanitário - Esgoto",
         "descricao": "Sistema de esgoto sanitário com tubulações e coleta identificada",
         "query_norma": "NBR 8160 sistema predial esgoto sanitário tubulações caixas inspeção",
-        "busca_textos": ["ESGOTO", "COLUNA", "TUBO ESGOTO", "CAIXA", "INSPEÇÃO"],
-        "busca_layers": [
-        "Esgoto",
-        "Hidrossanitário - Esgoto"
-        ]
+        "busca_textos": ["ESGOTO", "COLUNA", "TUBO ESGOTO", "CAIXA", "INSPEÇÃO", "TUBO DE QUEDA"],
+        "busca_layers": ["Esgoto", "Hidrossanitário - Esgoto"]
     },
     {
         "id": "HIDR-04",
         "categoria": "Hidrossanitário - Esgoto",
         "descricao": "Caixas de inspeção e caixas de passagem no sistema de esgoto",
         "query_norma": "NBR 8160 caixas de inspeção esgoto predial caixas passagem",
-        "busca_textos": ["CAIXA DE INSPEÇÃO", "CAIXA DE PASSAGEM", "CI", "PV"],
-        "busca_layers": [
-        "Esgoto",
-        "Hidrossanitário - Esgoto"
-        ]
+        "busca_textos": ["CAIXA DE INSPEÇÃO", "CAIXA DE PASSAGEM", "CAIXA DE GORDURA"],
+        "busca_layers": ["Esgoto", "Hidrossanitário - Esgoto"]
     },
     {
         "id": "HIDR-05",
@@ -386,9 +372,7 @@ VERIFICACOES = [
         "descricao": "Sistema de ventilação do esgoto (tubos de ventilação e colunas)",
         "query_norma": "NBR 8160 ventilação esgoto tubos ventilação colunas ventilação",
         "busca_textos": ["VENTILAÇÃO", "TUBO VENT", "COLUNA VENT", "RESPIRO"],
-        "busca_layers": [
-        "Hidrossanitário - Ventilação"
-        ]
+        "busca_layers": ["Hidrossanitário - Ventilação"]
     },
     {
         "id": "HIDR-06",
@@ -396,21 +380,15 @@ VERIFICACOES = [
         "descricao": "Sistema de águas pluviais com calhas, condutores e tubulações de drenagem",
         "query_norma": "NBR 10844 águas pluviais drenagem calhas condutores verticais",
         "busca_textos": ["PLUVIAL", "CALHA", "CONDUTOR", "ÁGUA DA CHUVA", "DRENAGEM"],
-        "busca_layers": [
-        "Hidrossanitário - Água Pluvial",
-        "Projeção Telhado",
-        "Cotas"
-        ]
+        "busca_layers": ["Hidrossanitário - Água Pluvial"]
     },
     {
         "id": "HIDR-07",
         "categoria": "Hidrossanitário - Água Quente",
         "descricao": "Sistema de água quente com tubulações isoladas e identificação de aquecimento",
         "query_norma": "NBR 5626 instalações água quente tubulação isolamento térmico",
-        "busca_textos": ["ÁGUA QUENTE", "AQ", "AQUECIMENTO", "BOILER", "AQUECEDOR"],
-        "busca_layers": [
-        "Hidrossanitário - Água Quente"
-        ]
+        "busca_textos": ["ÁGUA QUENTE", "AQUECIMENTO", "BOILER", "AQUECEDOR"],
+        "busca_layers": ["Hidrossanitário - Água Quente"]
     },
     {
         "id": "HIDR-08",
@@ -418,9 +396,7 @@ VERIFICACOES = [
         "descricao": "Reservação de água (caixas d’água, reservatórios superiores ou inferiores)",
         "query_norma": "NBR 5626 reservatórios água caixas d'água instalações prediais",
         "busca_textos": ["CAIXA D'ÁGUA", "RESERVATÓRIO", "TANQUE", "CISTERNA"],
-        "busca_layers": [
-        "Hidrossanitário - Água Fria"
-        ]
+        "busca_layers": ["Hidrossanitário - Água Fria"]
     },
     {
         "id": "HIDR-09",
@@ -428,99 +404,54 @@ VERIFICACOES = [
         "descricao": "Rede de gás canalizado com tubulações e pontos de consumo",
         "query_norma": "NBR 15526 instalações internas gás combustível tubulações GLP GN",
         "busca_textos": ["GÁS", "GLP", "GN", "TUBO GÁS", "REGISTRO GÁS"],
-        "busca_layers": [
-        "Hidrossanitário - Gás Encanado"
-        ]
+        "busca_layers": ["Hidrossanitário - Gás Encanado"]
     },
     {
         "id": "HIDR-10",
         "categoria": "Hidrossanitário - Geral",
         "descricao": "Compatibilização entre sistemas hidráulicos e arquitetura (furos, shafts e passagens)",
         "query_norma": "NBR 5626 compatibilização shafts passagens instalações hidráulicas",
-        "busca_textos": ["SHAFT", "PASSAGEM", "FURO", "PRUMADA", "DUTO"],
-        "busca_layers": [
-        "ARQ - Alvenaria",
-        "ARQ - Projeções",
-        "Hidrossanitário - Água Fria",
-        "Hidrossanitário - Esgoto",
-        "Hidrossanitário - Água Pluvial"
-        ]
+        "busca_textos": ["SHAFT", "FURO", "PRUMADA", "DUTO"],
+        "busca_layers": ["Hidrossanitário - Água Fria", "Hidrossanitário - Esgoto", "Hidrossanitário - Água Pluvial"]
     }
     
 ]
 
 REGRAS_VALORES = {
-    "ATR-01": {
-        "tipo": "existe",
-        "campos": [
-            "MALHA TERRA",
-            "MALHA DE ATERRAMENTO",
-            "HASTE COBREADA",
-            "HASTE DE TERRA",
-            "ELETRODO",
-        ],
-    },
-    "ATR-02": {
-        "tipo": "secao_mm2",
-        "minimo": 16,
-        "padrao": r"#([0-9]+)\s*mm",
-        "padrao_alt": r"COBRE\s+N[ÚU].*?#([0-9]+)",
-    },
-    "ATR-03": {
-        "tipo": "existe",
-        "campos": [
-            "SOLDA EXOTERMICA",
-            "CONECTOR SPLIT BOLT",
-            "CONECTOR DE EMENDA",
-            "CONECTOR BIMETALICO",
-            "CONECTORES APROPRIADOS",
-        ],
-    },
-    "ATR-04": {
-        "tipo": "existe",
-        "campos": [
-            "EQUIPOTENCIALIZACAO",
-            "MASSAS METALICAS",
-            "ELETROCALHAS",
-            "ATERRADAS",
-        ],
-    },
+    "ATR-01": {"tipo": "existe","campos": ["MALHA TERRA","MALHA DE ATERRAMENTO","HASTE COBREADA","HASTE DE TERRA","ELETRODO"]},
+    "ATR-02": {"tipo": "secao_mm2","minimo": 16,"padrao": r"#([0-9]+)\s*mm","padrao_alt": r"COBRE\s+N[ÚU].*?#([0-9]+)"},
+    "ATR-03": {"tipo": "existe","campos": ["SOLDA EXOTERMICA","CONECTOR SPLIT BOLT","CONECTOR DE EMENDA","CONECTOR BIMETALICO","CONECTORES APROPRIADOS"]},
+    "ATR-04": {"tipo": "existe","campos": ["EQUIPOTENCIALIZACAO","MASSAS METALICAS","ELETROCALHAS","ATERRADAS"]},
     "ATR-05": {"tipo": "existe", "campos": ["CAIXA DE INSPECAO", "CX. INSPECAO"]},
-    "SPDA-01": {
-        "tipo": "existe",
-        "campos": [
-            "MALHA SPDA",
-            "MALHA DO SPDA",
-            "MALHA DE BARRA CHATA DO SPDA",
-            "TERMINAL",
-        ],
-    },
+    "SPDA-01": {"tipo": "existe","campos": ["MALHA SPDA","MALHA DO SPDA","MALHA DE BARRA CHATA DO SPDA","TERMINAL"]},
     "SPDA-02": {"tipo": "existe", "campos": ["BARRA CHATA", "ALUMINIO", "DESCIDA"]},
     "SPDA-03": {"tipo": "existe", "campos": ["FIXADOR", "REBITE", "PARAFUSO"]},
-    "PROT-01": {
-        "tipo": "existe",
-        "campos": ["QDG", "QUADRO DE DISTRIBUICAO", "PAINEL"],
-    },
+    "PROT-01": {"tipo": "existe","campos": ["QDG", "QUADRO DE DISTRIBUICAO", "PAINEL"]},
     "PROT-02": {"tipo": "icc_ka", "minimo": 10, "padrao": r"ICC\s*=\s*([0-9]+)\s*KA"},
     "PROT-03": {"tipo": "amperagem", "minimo": 400, "padrao": r"([0-9]+)\s*A\b"},
-    "PROT-04": {
-        "tipo": "existe",
-        "campos": ["PADRAO DE ENTRADA", "BAIXA TENSAO", "CENTRO MEDICAO"],
-    },
+    "PROT-04": {"tipo": "existe","campos": ["PADRAO DE ENTRADA", "BAIXA TENSAO", "CENTRO MEDICAO"]},
     "COND-01": {"tipo": "existe_todos", "campos": ["EPR", "90", "1,0KV", "ISOL"]},
     "COND-02": {"tipo": "existe", "campos": ["TERRA", "ATERRAMENTO", "PROTECAO"]},
     "COND-03": {"tipo": "existe", "campos": ["NEUTRO"]},
     "CIRC-01": {"tipo": "regex", "padrao": r"CS-[0-9]+"},
     "CIRC-02": {"tipo": "existe", "campos": ["AR COND", "BTU"]},
     "CIRC-03": {"tipo": "existe_todos", "campos": ["CARGA", "CORRENTE"]},
-    "DOC-01": {
-        "tipo": "existe",
-        "campos": ["ART", "MEMORIA DE CALCULO", "PROFISSIONAL"],
-    },
+    "DOC-01": {"tipo": "existe","campos": ["ART", "MEMORIA DE CALCULO", "PROFISSIONAL"]},
     "DOC-02": {"tipo": "existe", "campos": ["PROJETO BASICO", "VALIDACAO"]},
     "EST-02": {"tipo": "existe", "campos": ["PILAR", "P1", "P2", "FCK"]},
     "EST-03": {"tipo": "existe", "campos": ["VIGA", "V1", "ESTRIBO"]},
-    "EST-04": {"tipo": "existe", "campos": ["LAJE", "L1", "EPS"]}
+    "EST-04": {"tipo": "existe", "campos": ["LAJE", "L1", "EPS"]},
+    "EST-05": {"tipo": "existe", "campos": ["ALVENARIA", "BLOCO", "PRISMA", "GRAUTE"]},
+    "HIDR-01": {"tipo": "existe", "campos": ["AGUA FRIA", "TUBO", "PVC", "RAMAL", "DISTRIBUICAO"]},
+    "HIDR-02": {"tipo": "existe", "campos": ["LAVATORIO", "CHUVEIRO", "TORNEIRA", "CONSUMO"]},
+    "HIDR-03": {"tipo": "existe", "campos": ["TUBO DE QUEDA", "ESGOTO", "DN 100", "RAMAL DE DESCARGA"]},
+    "HIDR-04": {"tipo": "existe", "campos": ["CAIXA DE GORDURA", "CAIXA DE INSPECAO", "CAIXA DE PASSAGEM"]},
+    "HIDR-05": {"tipo": "existe", "campos": ["VENTILACAO", "TUBO VENT", "COLUNA VENT", "RESPIRO"]},
+    "HIDR-06": {"tipo": "existe", "campos": ["CALHA", "CONDUTOR", "AGUA PLUVIAL", "TUBO DE QUEDA PLUVIAL", "PLUVIAL"]},
+    "HIDR-07": {"tipo": "existe", "campos": ["AGUA QUENTE", "AQUECIMENTO", "BOILER", "AQUECEDOR"]},
+    "HIDR-08": {"tipo": "existe", "campos": ["RESERVATORIO", "CAIXA D'AGUA", "CAIXA DAGUA", "CASTELO", "CISTERNA"]},
+    "HIDR-09": {"tipo": "existe", "campos": ["GAS", "GLP", "GN", "TUBO GAS", "REGISTRO GAS"]},
+    "HIDR-10": {"tipo": "existe", "campos": ["SHAFT", "PASSAGEM", "FURO", "PRUMADA", "DUTO"]}
 }
 
 
@@ -745,16 +676,15 @@ def _limpar_texto_dxf(texto: str) -> str:
 
 def _match_texto_flexivel(texto_limpo: str, termo: str) -> bool:
     t = _remover_acentos(termo.upper().strip())
-    if t in texto_limpo:
+    padrao = r'\b' + re.escape(t) + r'\b'
+    if re.search(padrao, texto_limpo):
         return True
-    t_sem_espacos = t.replace(" ", "")
-    texto_sem_espacos = texto_limpo.replace(" ", "")
-    if t_sem_espacos in texto_sem_espacos:
-        return True
+    
     palavras_termo = t.split()
     if len(palavras_termo) > 1:
-        if all(p in texto_limpo for p in palavras_termo):
+        if all(re.search(r'\b' + re.escape(p) + r'\b', texto_limpo) for p in palavras_termo):
             return True
+            
     return False
 
 
@@ -891,7 +821,7 @@ def _validar_valores(verificacao_id: str, evidencias: dict) -> dict:
     regra = REGRAS_VALORES.get(verificacao_id)
     if not regra:
         return {
-            "ok": False,
+            "ok": None,
             "detalhe": "Sem regra de validação definida.",
             "valores": [],
         }
