@@ -8,6 +8,8 @@ from langchain_ollama import OllamaEmbeddings
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+from . import ollama_installer
+
 BASE_DIR = Path(__file__).resolve().parents[3]
 CHROMA_DIR = BASE_DIR / "media" / "chroma_normas_db"
 MODELO_EMBEDDING = "nomic-embed-text"
@@ -46,8 +48,37 @@ def normalizar_codigo(codigo: str) -> str:
     codigo = re.sub(r"[^A-Z0-9]", "", codigo)
     return codigo
 
+def limpar_texto(texto: str) -> str:
+    texto = re.sub(r"[^\x00-\x7FÀ-ÿ]", " ", texto)
+    texto = re.sub(r"[ \t]+", " ", texto)
+    linhas = texto.splitlines()
+    linhas_limpas = []
+
+    for linha in linhas:
+        l = linha.strip()
+
+        if not l:
+            continue
+
+        if re.fullmatch(r"[\W_]+", l):
+            continue
+
+        if len(l) <= 2:
+            continue
+
+        linhas_limpas.append(l)
+
+    texto = "\n".join(linhas_limpas)
+
+    texto = re.sub(r"\n{2,}", "\n", texto)
+
+    return texto.strip()
+
 
 def inserir_norma(pdf_path: str, metadados: dict) -> dict:
+    print('[DEBUG] Verificações Ollama')
+    ollama_installer.ensure_ollama_ready(['nomic-embed-text'])
+
     print(f"[DEBUG] Iniciando inserção do PDF: {pdf_path}")
 
     loader = PyPDFLoader(pdf_path)
@@ -56,6 +87,7 @@ def inserir_norma(pdf_path: str, metadados: dict) -> dict:
     print(f"[DEBUG] Total de páginas carregadas: {len(pages)}")
 
     texto = "\n".join(p.page_content for p in pages)
+    texto = limpar_texto(texto)
 
     print(f"[DEBUG] Tamanho do texto extraído: {len(texto)} caracteres")
 

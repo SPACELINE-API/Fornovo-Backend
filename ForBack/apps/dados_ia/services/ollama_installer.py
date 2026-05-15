@@ -23,13 +23,13 @@ def ollama_rodando() -> bool:
         return False
 
 
-def modelos_instalados() -> bool:
-    result = subprocess.run(["ollama", "list"], capture_output=True, text=True)
-    output = result.stdout.lower()
-    return all(m.lower() in output for m in MODELOS)
+def ensure_ollama_ready(MODELOS: list):
 
+    def modelos_instalados() -> bool:
+        result = subprocess.run(["ollama", "list"], capture_output=True, text=True)
+        output = result.stdout.lower()
+        return all(m.lower() in output for m in MODELOS)
 
-def ensure_ollama_ready():
     if not ollama_instalado():
         print("Instalando Ollama")
         installer_path = os.path.join(
