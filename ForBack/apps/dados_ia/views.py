@@ -231,7 +231,7 @@ class ProcessarProjetoIA(APIView):
                     output_dir.rmdir()
             
             try:
-                ollama_installer.ensure_ollama_ready()
+                ollama_installer.ensure_ollama_ready(['llama3.1:8b'])
                 retorno_ia = executar_agente(dados_json)
             except Exception as e:
                 return Response({"erro": "Falha na execução do agente da IA", "detalhe": str(e)}, status=500)
