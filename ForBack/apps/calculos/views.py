@@ -36,202 +36,203 @@ class levantamentoCampo(APIView):
                 projeto = Projeto.objects.get(id_projeto=projeto_id)
             except Projeto.DoesNotExist:
                 return Response({"error": "Projeto não encontrado"}, status=404)
-            ambiente = Ambiente.objects.create(
-                nome=data.get("nome"),
-                comprimento=to_float(data.get("comprimento")),
-                largura=to_float(data.get("largura")),
-                altura=to_float(data.get("altura")),
-                area=to_float(data.get("comprimento")) * to_float(data.get("largura")),
-                projeto=projeto
-            )
-
-            PontoEletrico.objects.create(
-                ambiente=ambiente,
-                tomadas=to_int(data.get("tomadas")),
-                pontos_iluminacao=to_int(data.get("iluminacao")),
-                interruptores=to_int(data.get("interruptores")),
-            )
-
-            for cabo in data.get("cabos", []):
-                Cabo.objects.create(
-                    ambiente=ambiente,
-                    circuito=cabo.get("circuito"),
-                    secao_mm2=to_float(cabo.get("secao"))
+            for ambiente_data in data.get("ambientes", []):
+                ambiente = Ambiente.objects.create(
+                    nome=ambiente_data.get("nome"),
+                    comprimento=to_float(ambiente_data.get("comprimento")),
+                    largura=to_float(ambiente_data.get("largura")),
+                    altura=to_float(ambiente_data.get("altura")),
+                    area=to_float(ambiente_data.get("comprimento")) * to_float(data.get("largura")),
+                    projeto=projeto
                 )
 
-            for d in data.get("disjuntores", []):
-                Disjuntor.objects.create(
+                PontoEletrico.objects.create(
                     ambiente=ambiente,
-                    amperagem=to_float(d.get("amperagem")),
-                    quantidade=to_int(d.get("quantidade"))
+                    tomadas=to_int(ambiente_data.get("tomadas")),
+                    pontos_iluminacao=to_int(ambiente_data.get("iluminacao")),
+                    interruptores=to_int(ambiente_data.get("interruptores")),
                 )
 
-            TipoEletrico.objects.create(
-                ambiente=ambiente,
-                tipo_tomada=data.get("tipoTomada"),
-                tipo_interruptor=data.get("tipoInterruptor"),
-                tipo_luminaria=data.get("tipoLuminaria"),
-                altura_instalacao=to_float(data.get("alturaInstalacao"))
-            )
+                for cabo in ambiente_data.get("cabos", []):
+                    Cabo.objects.create(
+                        ambiente=ambiente,
+                        circuito=cabo.get("circuito"),
+                        secao_mm2=to_float(cabo.get("secao"))
+                    )
 
-            for r in data.get("ramais", []):
-                Ramal.objects.create(
+                for d in ambiente_data.get("disjuntores", []):
+                    Disjuntor.objects.create(
+                        ambiente=ambiente,
+                        amperagem=to_float(d.get("amperagem")),
+                        quantidade=to_int(d.get("quantidade"))
+                    )
+
+                TipoEletrico.objects.create(
                     ambiente=ambiente,
-                    nome=r.get("nome"),
-                    diametro=r.get("diametro"),
-                    comprimento_m=to_float(r.get("comprimento"))
+                    tipo_tomada=ambiente_data.get("tipoTomada"),
+                    tipo_interruptor=ambiente_data.get("tipoInterruptor"),
+                    tipo_luminaria=ambiente_data.get("tipoLuminaria"),
+                    altura_instalacao=to_float(ambiente_data.get("alturaInstalacao"))
                 )
 
-            Hidraulica.objects.create(
-                ambiente=ambiente,
-                registros=to_int(data.get("registros")),
-                valvulas=to_int(data.get("valvulas")),
-                conexoes=to_int(data.get("conexoes"))
-            )
+                for r in ambiente_data.get("ramais", []):
+                    Ramal.objects.create(
+                        ambiente=ambiente,
+                        nome=r.get("nome"),
+                        diametro=r.get("diametro"),
+                        comprimento_m=to_float(r.get("comprimento"))
+                    )
 
-            reservat = data.get("reservatorio", {})
-            if reservat:
-                Reservatorio.objects.create(
+                Hidraulica.objects.create(
                     ambiente=ambiente,
-                    tipo=reservat.get("tipo"),
-                    capacidade_l=to_float(reservat.get("capacidade"))
+                    registros=to_int(ambiente_data.get("registros")),
+                    valvulas=to_int(ambiente_data.get("valvulas")),
+                    conexoes=to_int(ambiente_data.get("conexoes"))
                 )
 
-            SPDA.objects.create(
-                ambiente=ambiente,
-                hastes=to_int(data.get("hastesAterramento")),
-                caixas_inspecao=to_int(data.get("caixasInspecao")),
-                terminais_aereos=to_int(data.get("terminaisAereos"))
-            )
+                reservat = ambiente_data.get("reservatorio", {})
+                if reservat:
+                    Reservatorio.objects.create(
+                        ambiente=ambiente,
+                        tipo=reservat.get("tipo"),
+                        capacidade_l=to_float(reservat.get("capacidade"))
+                    )
 
-            Telecom.objects.create(
-                ambiente=ambiente,
-                quadros_rede=to_int(data.get("quadrosRede")),
-                patch_cords=to_int(data.get("patchCords")),
-                cameras=to_int(data.get("cameras"))
-            )
-
-            for cab in data.get("cabeamentos", []):
-                Cabeamento.objects.create(
+                SPDA.objects.create(
                     ambiente=ambiente,
-                    circuito=cab.get("circuito"),
-                    comprimento_m=to_float(cab.get("comprimento")),
-                    tomadas=to_int(cab.get("tomadas"))
+                    hastes=to_int(ambiente_data.get("hastesAterramento")),
+                    caixas_inspecao=to_int(ambiente_data.get("caixasInspecao")),
+                    terminais_aereos=to_int(ambiente_data.get("terminaisAereos"))
                 )
 
-            for e in data.get("extintores", []):
-                Extintor.objects.create(
+                Telecom.objects.create(
                     ambiente=ambiente,
-                    tipo=e.get("tipo"),
-                    peso_kg=to_float(e.get("peso")),
-                    capacidade_l=to_float(e.get("capacidade"))
+                    quadros_rede=to_int(ambiente_data.get("quadrosRede")),
+                    patch_cords=to_int(ambiente_data.get("patchCords")),
+                    cameras=to_int(ambiente_data.get("cameras"))
                 )
 
-            for h in data.get("hidrantes", []):
-                Hidrante.objects.create(
+                for cab in ambiente_data.get("cabeamentos", []):
+                    Cabeamento.objects.create(
+                        ambiente=ambiente,
+                        circuito=cab.get("circuito"),
+                        comprimento_m=to_float(cab.get("comprimento")),
+                        tomadas=to_int(cab.get("tomadas"))
+                    )
+
+                for e in ambiente_data.get("extintores", []):
+                    Extintor.objects.create(
+                        ambiente=ambiente,
+                        tipo=e.get("tipo"),
+                        peso_kg=to_float(e.get("peso")),
+                        capacidade_l=to_float(e.get("capacidade"))
+                    )
+
+                for h in ambiente_data.get("hidrantes", []):
+                    Hidrante.objects.create(
+                        ambiente=ambiente,
+                        localizacao=h.get("localizacao"),
+                        diametro=h.get("diametro"),
+                        conexoes=to_int(h.get("conexoes"))
+                    )
+                for duto in ambiente_data.get("dutos", []):
+                    Duto.objects.create(
+                        ambiente=ambiente,
+                        diametro=duto.get("diametro"),
+                        comprimento_m=to_float(duto.get("comprimento"))
+                    )
+
+                Cobertura.objects.create(
                     ambiente=ambiente,
-                    localizacao=h.get("localizacao"),
-                    diametro=h.get("diametro"),
-                    conexoes=to_int(h.get("conexoes"))
-                )
-            for duto in data.get("dutos", []):
-                Duto.objects.create(
-                    ambiente=ambiente,
-                    diametro=duto.get("diametro"),
-                    comprimento_m=to_float(duto.get("comprimento"))
-                )
-
-            Cobertura.objects.create(
-                ambiente=ambiente,
-                estrutura=data.get("tipoEstrutura"),
-                telhamento=data.get("tipoTelhamento"),
-                espessura_cm=to_float(data.get("espessura")),
-                inclinacao_percent=to_float(data.get("inclinacao")),
-            )
-
-            for p in data.get("pecas", []):
-                Peca.objects.create(
-                    ambiente=ambiente,
-                    descricao=p.get("descricao"),
-                    secao=p.get("secao")
-                )
-
-            Canteiro.objects.create(
-                ambiente=ambiente,
-                conteineres=to_int(data.get("conteineres")),
-                banheiros=to_int(data.get("banheirosQuimicos")),
-                andaimes=to_int(data.get("andaimes")),
-            )
-
-            Residuo.objects.create(
-                ambiente=ambiente,
-                comum_m3=to_float(data.get("residuoComum")),
-                contaminado_m3=to_float(data.get("residuoContaminado")),
-                destinacao=data.get("destinacaoResiduo"),
-            )
-
-            Escavacao.objects.create(
-                ambiente=ambiente,
-                profundidade_m=to_float(data.get("profundidadeEscavacao")),
-                inclinacao_percent=to_float(data.get("inclinacaoTerreno")),
-            )
-
-            v = data.get("volumes", {})
-            if v:
-                Volume.objects.create(
-                    ambiente=ambiente,
-                    terraplanagem_m3=to_float(v.get("terraplanagem")),
-                    escavacao_m3=to_float(v.get("escavacao")),
-                    aterro_m3=to_float(v.get("aterro")),
-                    enrocamento_m3=to_float(v.get("enrocamento")),
-                    contencao_m3=to_float(v.get("contencao")),
-                    taludamento_m3=to_float(v.get("taludamento")),
-                    nivelamento_m3=to_float(v.get("nivelamento")),
-                    compactacao_m3=to_float(v.get("compactacao")),
+                    estrutura=ambiente_data.get("tipoEstrutura"),
+                    telhamento=ambiente_data.get("tipoTelhamento"),
+                    espessura_cm=to_float(ambiente_data.get("espessura")),
+                    inclinacao_percent=to_float(ambiente_data.get("inclinacao")),
                 )
 
-            for f in data.get("fundacoes", []):
-                Fundacao.objects.create(
+                for p in ambiente_data.get("pecas", []):
+                    Peca.objects.create(
+                        ambiente=ambiente,
+                        descricao=p.get("descricao"),
+                        secao=p.get("secao")
+                    )
+
+                Canteiro.objects.create(
                     ambiente=ambiente,
-                    tipo=f.get("tipo"),
-                    profundidade_m=to_float(f.get("profundidade")),
-                    volume_lastro_m3=to_float(f.get("volumeLastro")),
-                    volume_concreto_m3=to_float(f.get("volumeConcreto")),
-                    ferragem_kgf=to_float(f.get("pesoFerragem")),
-                    estribo_kgf=to_float(f.get("pesoEstribo")),
-                    forma_m2=to_float(f.get("areaForma")),
+                    conteineres=to_int(ambiente_data.get("conteineres")),
+                    banheiros=to_int(ambiente_data.get("banheirosQuimicos")),
+                    andaimes=to_int(ambiente_data.get("andaimes")),
                 )
 
-            for s in data.get("superestrutura", []):
-                SuperEstrutura.objects.create(
+                Residuo.objects.create(
                     ambiente=ambiente,
-                    tipo=s.get("tipo"),
-                    largura_m=to_float(s.get("largura")),
-                    altura_m=to_float(s.get("altura")),
-                    volume_concreto_m3=to_float(s.get("volumeConcreto")),
-                    ferragem_kgf=to_float(s.get("pesoFerragem")),
-                    estribo_kgf=to_float(s.get("pesoEstribo")),
-                    forma_m2=to_float(s.get("areaForma")),
+                    comum_m3=to_float(ambiente_data.get("residuoComum")),
+                    contaminado_m3=to_float(ambiente_data.get("residuoContaminado")),
+                    destinacao=ambiente_data.get("destinacaoResiduo"),
                 )
 
-            for m in data.get("metalicas", []):
-                EstruturaMetalica.objects.create(
+                Escavacao.objects.create(
                     ambiente=ambiente,
-                    tipo=m.get("tipo"),
-                    perfil=m.get("tipoPerfil"),
-                    secao=m.get("secao"),
-                    peso_kgf=to_float(m.get("peso")),
-                    elastomero=to_float(m.get("elastomero")),
+                    profundidade_m=to_float(ambiente_data.get("profundidadeEscavacao")),
+                    inclinacao_percent=to_float(ambiente_data.get("inclinacaoTerreno")),
                 )
 
-            for m in data.get("madeira", []):
-                EstruturaMadeira.objects.create(
-                    ambiente=ambiente,
-                    peca=m.get("tipoPeca"),
-                    secao=m.get("secao"),
-                    peso_kgf=to_float(m.get("pesoTotal")),
-                    telhamento=m.get("tipoTelhamento"),
-                )
+                v = ambiente_data.get("volumes", {})
+                if v:
+                    Volume.objects.create(
+                        ambiente=ambiente,
+                        terraplanagem_m3=to_float(v.get("terraplanagem")),
+                        escavacao_m3=to_float(v.get("escavacao")),
+                        aterro_m3=to_float(v.get("aterro")),
+                        enrocamento_m3=to_float(v.get("enrocamento")),
+                        contencao_m3=to_float(v.get("contencao")),
+                        taludamento_m3=to_float(v.get("taludamento")),
+                        nivelamento_m3=to_float(v.get("nivelamento")),
+                        compactacao_m3=to_float(v.get("compactacao")),
+                    )
+
+                for f in ambiente_data.get("fundacoes", []):
+                    Fundacao.objects.create(
+                        ambiente=ambiente,
+                        tipo=f.get("tipo"),
+                        profundidade_m=to_float(f.get("profundidade")),
+                        volume_lastro_m3=to_float(f.get("volumeLastro")),
+                        volume_concreto_m3=to_float(f.get("volumeConcreto")),
+                        ferragem_kgf=to_float(f.get("pesoFerragem")),
+                        estribo_kgf=to_float(f.get("pesoEstribo")),
+                        forma_m2=to_float(f.get("areaForma")),
+                    )
+
+                for s in ambiente_data.get("superestrutura", []):
+                    SuperEstrutura.objects.create(
+                        ambiente=ambiente,
+                        tipo=s.get("tipo"),
+                        largura_m=to_float(s.get("largura")),
+                        altura_m=to_float(s.get("altura")),
+                        volume_concreto_m3=to_float(s.get("volumeConcreto")),
+                        ferragem_kgf=to_float(s.get("pesoFerragem")),
+                        estribo_kgf=to_float(s.get("pesoEstribo")),
+                        forma_m2=to_float(s.get("areaForma")),
+                    )
+
+                for m in ambiente_data.get("metalicas", []):
+                    EstruturaMetalica.objects.create(
+                        ambiente=ambiente,
+                        tipo=m.get("tipo"),
+                        perfil=m.get("tipoPerfil"),
+                        secao=m.get("secao"),
+                        peso_kgf=to_float(m.get("peso")),
+                        elastomero=to_float(m.get("elastomero")),
+                    )
+
+                for m in ambiente_data.get("madeira", []):
+                    EstruturaMadeira.objects.create(
+                        ambiente=ambiente,
+                        peca=m.get("tipoPeca"),
+                        secao=m.get("secao"),
+                        peso_kgf=to_float(m.get("pesoTotal")),
+                        telhamento=m.get("tipoTelhamento"),
+                    )
 
             return Response({"message": "Salvo com sucesso"}, status=201)
         except Exception as e:
@@ -260,6 +261,7 @@ class levantamentoCampo(APIView):
                 escavacao = a.escavacao_set.first()
                 volume = a.volume_set.first()
                 results.append({
+                    "id":a.id,
                     "projeto_id": a.projeto.id_projeto,
                     "nome": a.nome,
                     "comprimento": a.comprimento,
@@ -327,7 +329,243 @@ class levantamentoCampo(APIView):
                         {"tipoPeca": md.peca, "secao": md.secao, "pesoTotal": md.peso_kgf, "tipoTelhamento": md.telhamento} 
                         for md in a.estruturamadeira_set.all()
                     ],
+                    "created_at": a.created_at.isoformat() if a.created_at else None
                 })
-            return Response(results[0] if projeto_id else results)
+            return Response(results)
         except Exception as e:
             return Response({"error": str(e)}, status=500)
+
+    def patch(self, request, projeto_id=None):
+        data = request.data
+        try:
+            with transaction.atomic():
+                ambiente_id = data.get("ambiente_id")
+                if not ambiente_id:
+                    return Response({"error": "ambiente_id é obrigatório"}, status=400)
+    
+                try:
+                    ambiente = Ambiente.objects.get(id=ambiente_id)
+                except Ambiente.DoesNotExist:
+                    return Response({"error": "Ambiente não encontrado"}, status=404)
+
+                ambiente_data = data
+                ambiente.nome = ambiente_data.get("nome", ambiente.nome)
+                ambiente.comprimento = to_float(ambiente_data.get("comprimento"))
+                ambiente.largura = to_float(ambiente_data.get("largura"))
+                ambiente.altura = to_float(ambiente_data.get("altura"))
+                ambiente.save()
+                ambiente.pontoeletrico_set.all().delete()
+                PontoEletrico.objects.create(
+                    ambiente=ambiente,
+                    tomadas=to_int(ambiente_data.get("tomadas")),
+                    pontos_iluminacao=to_int(ambiente_data.get("iluminacao")),
+                    interruptores=to_int(ambiente_data.get("interruptores")),
+                )
+
+                ambiente.tipoeletrico_set.all().delete()
+                TipoEletrico.objects.create(
+                    ambiente=ambiente,
+                    tipo_tomada=ambiente_data.get("tipoTomada"),
+                    tipo_interruptor=ambiente_data.get("tipoInterruptor"),
+                    tipo_luminaria=ambiente_data.get("tipoLuminaria"),
+                    altura_instalacao=to_float(ambiente_data.get("alturaInstalacao"))
+                )
+
+                ambiente.cabo_set.all().delete()
+                for cabo in ambiente_data.get("cabos", []):
+                    Cabo.objects.create(
+                        ambiente=ambiente,
+                        circuito=cabo.get("circuito"),
+                        secao_mm2=to_float(cabo.get("secao"))
+                    )
+
+                ambiente.disjuntor_set.all().delete()
+                for d in ambiente_data.get("disjuntores", []):
+                    Disjuntor.objects.create(
+                        ambiente=ambiente,
+                        amperagem=to_float(d.get("amperagem")),
+                        quantidade=to_int(d.get("quantidade"))
+                    )
+
+                ambiente.ramal_set.all().delete()
+                for r in ambiente_data.get("ramais", []):
+                    Ramal.objects.create(
+                        ambiente=ambiente,
+                        nome=r.get("nome"),
+                        diametro=r.get("diametro"),
+                        comprimento_m=to_float(r.get("comprimento"))
+                    )
+
+                ambiente.hidraulica_set.all().delete()
+                Hidraulica.objects.create(
+                    ambiente=ambiente,
+                    registros=to_int(ambiente_data.get("registros")),
+                    valvulas=to_int(ambiente_data.get("valvulas")),
+                    conexoes=to_int(ambiente_data.get("conexoes"))
+                )
+
+                ambiente.reservatorio_set.all().delete()
+                reservat = ambiente_data.get("reservatorio", {})
+                if reservat:
+                    Reservatorio.objects.create(
+                        ambiente=ambiente,
+                        tipo=reservat.get("tipo"),
+                        capacidade_l=to_float(reservat.get("capacidade"))
+                    )
+
+                ambiente.spda_set.all().delete()
+                SPDA.objects.create(
+                    ambiente=ambiente,
+                    hastes=to_int(ambiente_data.get("hastesAterramento")),
+                    caixas_inspecao=to_int(ambiente_data.get("caixasInspecao")),
+                    terminais_aereos=to_int(ambiente_data.get("terminaisAereos"))
+                )
+
+                ambiente.telecom_set.all().delete()
+                Telecom.objects.create(
+                    ambiente=ambiente,
+                    quadros_rede=to_int(ambiente_data.get("quadrosRede")),
+                    patch_cords=to_int(ambiente_data.get("patchCords")),
+                    cameras=to_int(ambiente_data.get("cameras"))
+                )
+
+                ambiente.cabeamento_set.all().delete()
+                for cab in ambiente_data.get("cabeamentos", []):
+                    Cabeamento.objects.create(
+                        ambiente=ambiente,
+                        circuito=cab.get("circuito"),
+                        comprimento_m=to_float(cab.get("comprimento")),
+                        tomadas=to_int(cab.get("tomadas"))
+                    )
+
+                ambiente.extintor_set.all().delete()
+                for e in ambiente_data.get("extintores", []):
+                    Extintor.objects.create(
+                        ambiente=ambiente,
+                        tipo=e.get("tipo"),
+                        peso_kg=to_float(e.get("peso")),
+                        capacidade_l=to_float(e.get("capacidade"))
+                    )
+
+                ambiente.hidrante_set.all().delete()
+                for h in ambiente_data.get("hidrantes", []):
+                    Hidrante.objects.create(
+                        ambiente=ambiente,
+                        localizacao=h.get("localizacao"),
+                        diametro=h.get("diametro"),
+                        conexoes=to_int(h.get("conexoes"))
+                    )
+
+                ambiente.duto_set.all().delete()
+                for duto in ambiente_data.get("dutos", []):
+                    Duto.objects.create(
+                        ambiente=ambiente,
+                        diametro=duto.get("diametro"),
+                        comprimento_m=to_float(duto.get("comprimento"))
+                    )
+
+                ambiente.cobertura_set.all().delete()
+                Cobertura.objects.create(
+                    ambiente=ambiente,
+                    estrutura=ambiente_data.get("tipoEstrutura"),
+                    telhamento=ambiente_data.get("tipoTelhamento"),
+                    espessura_cm=to_float(ambiente_data.get("espessura")),
+                    inclinacao_percent=to_float(ambiente_data.get("inclinacao")),
+                )
+
+                ambiente.peca_set.all().delete()
+                for p in ambiente_data.get("pecas", []):
+                    Peca.objects.create(
+                        ambiente=ambiente,
+                        descricao=p.get("descricao"),
+                        secao=p.get("secao")
+                    )
+
+                ambiente.canteiro_set.all().delete()
+                Canteiro.objects.create(
+                    ambiente=ambiente,
+                    conteineres=to_int(ambiente_data.get("conteineres")),
+                    banheiros=to_int(ambiente_data.get("banheirosQuimicos")),
+                    andaimes=to_int(ambiente_data.get("andaimes")),
+                )
+
+                ambiente.residuo_set.all().delete()
+                Residuo.objects.create(
+                    ambiente=ambiente,
+                    comum_m3=to_float(ambiente_data.get("residuoComum")),
+                    contaminado_m3=to_float(ambiente_data.get("residuoContaminado")),
+                    destinacao=ambiente_data.get("destinacaoResiduo"),
+                )
+
+                ambiente.escavacao_set.all().delete()
+                Escavacao.objects.create(
+                    ambiente=ambiente,
+                    profundidade_m=to_float(ambiente_data.get("profundidadeEscavacao")),
+                    inclinacao_percent=to_float(ambiente_data.get("inclinacaoTerreno")),
+                )
+
+                ambiente.volume_set.all().delete()
+                v = ambiente_data.get("volumes", {})
+                if v:
+                    Volume.objects.create(
+                        ambiente=ambiente,
+                        terraplanagem_m3=to_float(v.get("terraplanagem")),
+                        escavacao_m3=to_float(v.get("escavacao")),
+                        aterro_m3=to_float(v.get("aterro")),
+                        enrocamento_m3=to_float(v.get("enrocamento")),
+                        contencao_m3=to_float(v.get("contencao")),
+                        taludamento_m3=to_float(v.get("taludamento")),
+                        nivelamento_m3=to_float(v.get("nivelamento")),
+                        compactacao_m3=to_float(v.get("compactacao")),
+                    )
+
+                ambiente.fundacao_set.all().delete()
+                for f in ambiente_data.get("fundacoes", []):
+                    Fundacao.objects.create(
+                        ambiente=ambiente,
+                        tipo=f.get("tipo"),
+                        profundidade_m=to_float(f.get("profundidade")),
+                        volume_lastro_m3=to_float(f.get("volumeLastro")),
+                        volume_concreto_m3=to_float(f.get("volumeConcreto")),
+                        ferragem_kgf=to_float(f.get("pesoFerragem")),
+                        estribo_kgf=to_float(f.get("pesoEstribo")),
+                        forma_m2=to_float(f.get("areaForma")),
+                    )
+
+                ambiente.superestrutura_set.all().delete()
+                for s in ambiente_data.get("superestrutura", []):
+                    SuperEstrutura.objects.create(
+                        ambiente=ambiente,
+                        tipo=s.get("tipo"),
+                        largura_m=to_float(s.get("largura")),
+                        altura_m=to_float(s.get("altura")),
+                        volume_concreto_m3=to_float(s.get("volumeConcreto")),
+                        ferragem_kgf=to_float(s.get("pesoFerragem")),
+                        estribo_kgf=to_float(s.get("pesoEstribo")),
+                        forma_m2=to_float(s.get("areaForma")),
+                    )
+
+                ambiente.estruturametalica_set.all().delete()
+                for m in ambiente_data.get("metalicas", []):
+                    EstruturaMetalica.objects.create(
+                        ambiente=ambiente,
+                        tipo=m.get("tipo"),
+                        perfil=m.get("tipoPerfil"),
+                        secao=m.get("secao"),
+                        peso_kgf=to_float(m.get("peso")),
+                        elastomero=to_float(m.get("elastomero")),
+                    )
+
+                ambiente.estruturamadeira_set.all().delete()
+                for m in ambiente_data.get("madeira", []):
+                    EstruturaMadeira.objects.create(
+                        ambiente=ambiente,
+                        peca=m.get("tipoPeca"),
+                        secao=m.get("secao"),
+                        peso_kgf=to_float(m.get("pesoTotal")),
+                        telhamento=m.get("tipoTelhamento"),
+                    )
+
+            return Response({"message": "Atualizado com sucesso"}, status=200)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
