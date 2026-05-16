@@ -292,7 +292,7 @@ class DownloadRelatorio(APIView):
         except Projeto.DoesNotExist:
             return Response({"erro": "Projeto não encontrado."}, status=404)
 
-        relatorio = Arquivo.objects.filter(projeto=projeto, tipo_arquivo='docx').last()
+        relatorio = RelatorioConformidade.objects.filter(projeto=projeto).order_by('criado_em').last()
 
         if not relatorio:
             return Response({"erro": "Nenhum relatório encontrado."}, status=404)
@@ -301,7 +301,7 @@ class DownloadRelatorio(APIView):
             return Response({"erro": "Arquivo físico não encontrado."}, status=404)
         
         return FileResponse(
-            relatorio.caminho_arquivo.open("rb"),
+            relatorio.arquivo.open("rb"),
             as_attachment=True,
             filename=relatorio.nome_arquivo,
             content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -320,7 +320,7 @@ class StatusRelatorio(APIView):
         except Projeto.DoesNotExist:
             return Response({"erro": "Projeto não encontrado."}, status=404)
 
-        relatorio = Arquivo.objects.filter(projeto=projeto, tipo_arquivo='docx').last()
+        relatorio = RelatorioConformidade.objects.filter(projeto=projeto).order_by('criado_em').first()
 
         if not relatorio:
             return Response({"status": "pendente"})
