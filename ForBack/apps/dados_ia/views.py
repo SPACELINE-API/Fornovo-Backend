@@ -4,7 +4,7 @@ import tempfile
 import traceback
 import ctypes
 import pickle
-import re # import de regex pra interpretação do texto do relatório
+import re 
 from pathlib import Path
 
 from aiohttp import request
@@ -239,17 +239,13 @@ class ProcessarProjetoIA(APIView):
             relatorio_md = retorno_ia.get("relatorio_md", "")
             if relatorio_md:
                 try:
-                    nome_projeto_limpo = re.sub(r'[^a-zA-Z0-9]+', '_', projeto.nome_projeto).strip('_').lower()
-                    nome = f"relatorio_{nome_projeto_limpo}.docx"
+                    nome = f"relatorio_{str(projeto_id)[:8]}.docx"
                     docx_bytes = gerar_docx_bytes(relatorio_md)
-                    hash_arquivo = hashlib.sha256(docx_bytes).hexdigest()
-                    Arquivo.objects.create(
-                        projeto=projeto,
-                        nome_arquivo=nome,
-                        hash_arquivo=hash_arquivo,
-                        tipo_arquivo='docx',
-                        caminho_arquivo=ContentFile(docx_bytes, name=nome)
-                    )
+                    relatorio = RelatorioConformidade(projeto=projeto)
+                    relatorio.arquivo.save(nome, ContentFile(docx_bytes), save=False)
+                    relatorio.nome_arquivo = nome
+                    relatorio.caminho_arquivo = relatorio.arquivo.name
+                    relatorio.save()
                 except Exception as e:
                     print(f"Erro ao salvar relatório: {e}")
                     
