@@ -487,6 +487,7 @@ def levantamento_campo(dados_manuais, dados_automaticos):
                 df.loc[idx_linha, ("Dimensões", "e [m]")] = ""
                 df.loc[idx_linha, ("Dimensões", "A [m²]")] = area
                 idx_linha += 1
+   
 
     pilares_entities = [
         e
