@@ -30,7 +30,7 @@ VERIFICACOES = [
         "id": "ATR-01",
         "categoria": "Aterramento",
         "descricao": "Sistema de aterramento presente (malha, haste cobreada, eletrodo)",
-        "query_norma": "sistema aterramento eletrodo haste cobreada malha NBR 5410",
+        "query_norma": "NBR 5410 sistema de aterramento eletrodo haste cobreada malha terra",
         "busca_textos": [
             "MALHA TERRA",
             "HASTE COBREADA",
@@ -52,7 +52,7 @@ VERIFICACOES = [
         "id": "ATR-02",
         "categoria": "Aterramento",
         "descricao": "Seção mínima do condutor de aterramento (≥ 16mm² cobre nu para malha enterrada)",
-        "query_norma": "seção mínima condutor aterramento cobre nu milímetros NBR 5410",
+        "query_norma": "NBR 5410 seção mínima condutor de aterramento cobre nu mm²",
         "busca_textos": [
             "#35MM²",
             "#50MM²",
@@ -68,7 +68,7 @@ VERIFICACOES = [
         "id": "ATR-03",
         "categoria": "Aterramento",
         "descricao": "Conexões de aterramento por solda exotérmica ou conector apropriado",
-        "query_norma": "conexão aterramento solda exotérmica conector aprovado NBR",
+        "query_norma": "NBR 5410 conexão aterramento solda exotérmica conector aprovado",
         "busca_textos": [
             "SOLDA EXOTÉRMICA",
             "CONECTORES APROPRIADOS",
@@ -90,7 +90,7 @@ VERIFICACOES = [
         "id": "ATR-04",
         "categoria": "Aterramento",
         "descricao": "Equipotencialização de massas metálicas (eletrocalhas, eletrodutos, tubulações)",
-        "query_norma": "equipotencialização massas metálicas eletrocalhas eletrodutos NBR 5410",
+        "query_norma": "NBR 5410 equipotencialização massas metálicas eletrocalhas eletrodutos",
         "busca_textos": [
             "EQUIPOTENCIALIZAÇÃO",
             "MASSAS METÁLICAS",
@@ -110,7 +110,7 @@ VERIFICACOES = [
         "id": "ATR-05",
         "categoria": "Aterramento",
         "descricao": "Caixa de inspeção presente para acesso ao sistema de aterramento",
-        "query_norma": "caixa inspeção aterramento acesso medição resistência NBR",
+        "query_norma": "NBR 5410 caixa de inspeção aterramento medição resistência",
         "busca_textos": ["CX. INSPEÇÃO", "CAIXA DE INSPEÇÃO", "CX INSPECAO"],
         "busca_layers": [
             "ELE-CX. INSPEÇÃO",
@@ -123,7 +123,7 @@ VERIFICACOES = [
         "id": "SPDA-01",
         "categoria": "SPDA (Para-raios)",
         "descricao": "Sistema SPDA presente com malha e descidas identificadas",
-        "query_norma": "SPDA para-raios malha descida captores NBR 5419",
+        "query_norma": "NBR 5419 SPDA sistema proteção descidas malha captores",
         "busca_textos": [
             "SPDA",
             "MALHA SPDA",
@@ -146,7 +146,7 @@ VERIFICACOES = [
         "id": "SPDA-02",
         "categoria": "SPDA (Para-raios)",
         "descricao": 'Descidas em barra chata de alumínio com dimensões adequadas (mín. 7/8"x1/8")',
-        "query_norma": "descida SPDA barra chata alumínio dimensão mínima NBR 5419",
+        "query_norma": "NBR 5419 SPDA descidas barra chata alumínio seção mínima",
         "busca_textos": ["BARRA CHATA", "ALUMÍNIO", "7/8", "1/8", "DESCIDA"],
         "busca_layers": [
             "ELE-BARRA CHATA ALUMÍNIO",
@@ -161,7 +161,7 @@ VERIFICACOES = [
         "id": "SPDA-03",
         "categoria": "SPDA (Para-raios)",
         "descricao": "Fixadores e rebites utilizados nas descidas do SPDA",
-        "query_norma": "fixação descidas SPDA parafusos fixadores NBR 5419",
+        "query_norma": "NBR 5419 fixação descidas SPDA parafusos rebites fixadores",
         "busca_textos": ["FIXADOR", "REBITE", "PARAFUSO", "BUCHA DE NYLON"],
         "busca_layers": [
             "ELE-FIXADOR GELCAM",
@@ -176,7 +176,7 @@ VERIFICACOES = [
         "id": "PROT-01",
         "categoria": "Proteção e Quadros",
         "descricao": "Quadro geral de distribuição (QDG) presente e identificado",
-        "query_norma": "quadro geral distribuição QDG identificação NBR 5410",
+        "query_norma": "NBR 5410 quadro geral de distribuição QDG identificação",
         "busca_textos": [
             "QDG",
             "QUADRO",
@@ -191,8 +191,8 @@ VERIFICACOES = [
     {
         "id": "PROT-02",
         "categoria": "Proteção e Quadros",
-        "descricao": "Disjuntores com capacidade de interrupção declarada (Icc ≥ 10kA para BT)",
-        "query_norma": "capacidade interrupção disjuntor corrente curto circuito Icc NBR 5410",
+        "descricao": "Disjuntores com capacidade de interrupção declarada (Icc ≥ 10kA)",
+        "query_norma": "NBR 5410 disjuntores capacidade interrupção corrente curto circuito Icc",
         "busca_textos": [
             "Icc=20kA",
             "Icc=18kA",
@@ -207,8 +207,8 @@ VERIFICACOES = [
     {
         "id": "PROT-03",
         "categoria": "Proteção e Quadros",
-        "descricao": "Barramento com seção mínima declarada (≥ 400A conforme projeto)",
-        "query_norma": "barramento seção mínima amperagem quadro distribuição NBR 5410",
+        "descricao": "Barramento com seção mínima declarada (≥ 400A)",
+        "query_norma": "NBR 5410 barramento seção mínima corrente nominal 400A",
         "busca_textos": [
             "BARRAMENTO CENTRAL",
             "SECÇÃO MÍNIMA 400A",
@@ -220,8 +220,8 @@ VERIFICACOES = [
     {
         "id": "PROT-04",
         "categoria": "Proteção e Quadros",
-        "descricao": "Padrão de entrada de baixa tensão identificado (concessionária)",
-        "query_norma": "padrão entrada baixa tensão concessionária ramal NBR 5410",
+        "descricao": "Padrão de entrada de baixa tensão identificado",
+        "query_norma": "NBR 5410 padrão entrada baixa tensão concessionária medição",
         "busca_textos": [
             "PADRÃO DE ENTRADA BAIXA TENSÃO",
             "CENTRO MEDIÇÃO",
@@ -233,8 +233,8 @@ VERIFICACOES = [
     {
         "id": "COND-01",
         "categoria": "Condutores",
-        "descricao": "Isolação dos cabos compatível com temperatura e tensão (EPR 90°C, 1,0kV)",
-        "query_norma": "isolação condutor temperatura máxima tensão nominal EPR NBR 5410",
+        "descricao": "Isolação dos cabos compatível com temperatura e tensão",
+        "query_norma": "NBR 5410 isolamento condutores EPR 90C 1kV",
         "busca_textos": ["EPR 90", "ISOL.1,0kV", "1,0KV", "EPR", "ISOLAÇÃO"],
         "busca_layers": ["ELE-CIRCUITO", "CIRCUITO", "CABO", "FIAÇÃO", "Elétrica"],
     },
@@ -242,7 +242,7 @@ VERIFICACOES = [
         "id": "COND-02",
         "categoria": "Condutores",
         "descricao": "Condutor de proteção (terra) presente em todos os circuitos",
-        "query_norma": "condutor proteção terra PE circuito obrigatório NBR 5410",
+        "query_norma": "NBR 5410 condutor de proteção terra PE obrigatório",
         "busca_textos": ["TERRA", "CONDUTOR DE PROTEÇÃO", "PE"],
         "busca_layers": ["ELE-CIRCUITO", "CIRCUITO", "CABO", "Elétrica"],
     },
@@ -250,138 +250,208 @@ VERIFICACOES = [
         "id": "COND-03",
         "categoria": "Condutores",
         "descricao": "Condutor neutro identificado nos circuitos",
-        "query_norma": "condutor neutro identificação cor azul claro NBR 5410",
+        "query_norma": "NBR 5410 condutor neutro identificação cor azul claro",
         "busca_textos": ["NEUTRO", "CONDUTOR NEUTRO"],
         "busca_layers": ["ELE-CIRCUITO", "CIRCUITO", "CABO", "Elétrica"],
     },
     {
         "id": "CIRC-01",
         "categoria": "Circuitos e Cargas",
-        "descricao": "Circuitos numerados e identificados individualmente (CS-2 a CS-45)",
-        "query_norma": "identificação numeração circuitos quadro distribuição NBR 5410",
+        "descricao": "Circuitos numerados e identificados",
+        "query_norma": "NBR 5410 identificação circuitos numeração quadro distribuição",
         "busca_textos": ["CS-", "CIRCUITO", "CK-"],
         "busca_layers": ["ELE-CIRCUITO", "CIRCUITO", "Elétrica"],
     },
     {
         "id": "CIRC-02",
         "categoria": "Circuitos e Cargas",
-        "descricao": "Circuitos de ar condicionado com circuito exclusivo (uso específico)",
-        "query_norma": "circuito exclusivo uso específico ar condicionado chuveiro NBR 5410",
-        "busca_textos": [
-            "AP. AR COND.",
-            "BTU",
-            "CORTINA AR",
-            "AR CONDICIONADO",
-            "AR COND",
-        ],
-        "busca_layers": ["Elétrica", "CIRCUITO", "AR CONDICIONADO"],
+        "descricao": "Circuitos de ar condicionado com circuito exclusivo",
+        "query_norma": "NBR 5410 circuitos exclusivos ar condicionado cargas específicas",
+        "busca_textos": ["AR COND", "BTU", "AR CONDICIONADO"],
+        "busca_layers": ["Elétrica", "CIRCUITO"],
     },
     {
         "id": "CIRC-03",
         "categoria": "Circuitos e Cargas",
-        "descricao": "Indicação de carga (KW), corrente (A) e proteção (A) por circuito",
-        "query_norma": "dimensionamento circuito carga corrente proteção projeto elétrico NBR 5410",
-        "busca_textos": ["(KW)", "CARGA", "CORRENTE", "PROTECAO", "CABO"],
-        "busca_layers": ["ELE-CIRCUITO", "CIRCUITO", "Elétrica"],
+        "descricao": "Indicação de carga, corrente e proteção por circuito",
+        "query_norma": "NBR 5410 dimensionamento circuitos carga corrente proteção",
+        "busca_textos": ["CARGA", "CORRENTE", "PROTECAO"],
+        "busca_layers": ["ELE-CIRCUITO", "CIRCUITO"],
     },
     {
         "id": "DOC-01",
         "categoria": "Documentação",
-        "descricao": "Notas técnicas e memória de cálculo referenciadas no projeto",
-        "query_norma": "memória de cálculo ART documentação projeto elétrico NR-10 NBR",
-        "busca_textos": [
-            "ART",
-            "MEMÓRIA DE CÁLCULO",
-            "PROFISSIONAL CAPACITADO",
-            "VALIDAÇÃO",
-            "MEMORIA DE CALCULO",
-        ],
-        "busca_layers": ["ELE-TEXTOS", "TEXTOS", "NOTAS", "Elétrica"],
+        "descricao": "Memória de cálculo e ART presentes",
+        "query_norma": "NR-10 NBR documentação técnica ART memória de cálculo projeto elétrico",
+        "busca_textos": ["ART", "MEMÓRIA DE CÁLCULO", "PROFISSIONAL"],
+        "busca_layers": ["ELE-TEXTOS", "NOTAS"],
     },
     {
         "id": "DOC-02",
         "categoria": "Documentação",
-        "descricao": "Projeto classificado como básico com exigência de validação profissional",
-        "query_norma": "projeto básico aterramento validação profissional habilitado NR-10",
-        "busca_textos": [
-            "PROJETO BÁSICO",
-            "VALIDAÇÃO",
-            "EMPRESA VENCEDORA",
-            "PROJETO BASICO",
-        ],
-        "busca_layers": ["ELE-TEXTOS", "TEXTOS", "NOTAS", "Elétrica"],
+        "descricao": "Projeto básico com validação profissional",
+        "query_norma": "NR-10 validação profissional projeto básico elétrico",
+        "busca_textos": ["PROJETO BÁSICO", "VALIDAÇÃO"],
+        "busca_layers": ["ELE-TEXTOS", "NOTAS"],
     },
+    {
+        "id": "EST-01",
+        "categoria": "Fundações",
+        "descricao": "Elementos de fundação presentes",
+        "query_norma": "NBR 6122 fundações sapatas estacas blocos estruturais",
+        "busca_textos": ["SAPATA", "ESTACA", "BLOCO", "FUNDAÇÃO"],
+        "busca_layers": ["Estrutural - Fundações"],
+    },
+    {
+        "id": "EST-02",
+        "categoria": "Estrutural - Pilares",
+        "descricao": "Conformidade de pilares",
+        "query_norma": "NBR 6118 pilares concreto armado fck seção mínima",
+        "busca_textos": ["PILAR", "FCK"],
+        "busca_layers": ["Estrutural - Pilares"],
+    },
+    {
+        "id": "EST-03",
+        "categoria": "Estrutural - Vigas",
+        "descricao": "Detalhamento de vigas e armaduras",
+        "query_norma": "NBR 6118 vigas concreto armado estribos bitolas",
+        "busca_textos": ["VIGA", "ESTRIBO", "BITOLA"],
+        "busca_layers": ["Estrutural - Vigas"],
+    },
+    {
+        "id": "EST-04",
+        "categoria": "Estrutural - Lajes",
+        "descricao": "Espessura e armadura de lajes",
+        "query_norma": "NBR 6118 lajes espessura mínima armadura distribuição",
+        "busca_textos": ["LAJE", "EPS", "TRELIÇA"],
+        "busca_layers": ["Estrutural - Lajes"],
+    },
+    {
+        "id": "EST-05",
+        "categoria": "Alvenaria",
+        "descricao": "Alvenaria estrutural conforme norma",
+        "query_norma": "NBR 16868 alvenaria estrutural blocos resistência prisma",
+        "busca_textos": ["ALVENARIA", "BLOCO", "PRISMA"],
+        "busca_layers": ["Arquitetônico - Alvenaria"],
+    },
+    {
+        "id": "HIDR-01",
+        "categoria": "Hidrossanitário - Água Fria",
+        "descricao": "Rede de água fria identificada com tubulações e distribuição principal",
+        "query_norma": "NBR 5626 instalação predial água fria tubulação distribuição ramais",
+        "busca_textos": ["ÁGUA FRIA", "TUBO", "PVC", "RAMAL", "DISTRIBUIÇÃO"],
+        "busca_layers": ["Hidrossanitário - Água Fria"]
+    },
+    {
+        "id": "HIDR-02",
+        "categoria": "Hidrossanitário - Água Fria",
+        "descricao": "Identificação de pontos de consumo de água fria (lavatórios, chuveiros, torneiras)",
+        "query_norma": "NBR 5626 pontos de consumo instalações hidráulicas prediais",
+        "busca_textos": ["LAVATÓRIO", "CHUVEIRO", "TORNEIRA", "BANCADA", "CONSUMO"],
+        "busca_layers": ["Hidrossanitário - Mobiliário", "Hidrossanitário - Vasos Sanitários", "Hidrossanitário - Água Fria"]
+    },
+    {
+        "id": "HIDR-03",
+        "categoria": "Hidrossanitário - Esgoto",
+        "descricao": "Sistema de esgoto sanitário com tubulações e coleta identificada",
+        "query_norma": "NBR 8160 sistema predial esgoto sanitário tubulações caixas inspeção",
+        "busca_textos": ["ESGOTO", "COLUNA", "TUBO ESGOTO", "CAIXA", "INSPEÇÃO", "TUBO DE QUEDA"],
+        "busca_layers": ["Esgoto", "Hidrossanitário - Esgoto"]
+    },
+    {
+        "id": "HIDR-04",
+        "categoria": "Hidrossanitário - Esgoto",
+        "descricao": "Caixas de inspeção e caixas de passagem no sistema de esgoto",
+        "query_norma": "NBR 8160 caixas de inspeção esgoto predial caixas passagem",
+        "busca_textos": ["CAIXA DE INSPEÇÃO", "CAIXA DE PASSAGEM", "CAIXA DE GORDURA"],
+        "busca_layers": ["Esgoto", "Hidrossanitário - Esgoto"]
+    },
+    {
+        "id": "HIDR-05",
+        "categoria": "Hidrossanitário - Ventilação",
+        "descricao": "Sistema de ventilação do esgoto (tubos de ventilação e colunas)",
+        "query_norma": "NBR 8160 ventilação esgoto tubos ventilação colunas ventilação",
+        "busca_textos": ["VENTILAÇÃO", "TUBO VENT", "COLUNA VENT", "RESPIRO"],
+        "busca_layers": ["Hidrossanitário - Ventilação"]
+    },
+    {
+        "id": "HIDR-06",
+        "categoria": "Hidrossanitário - Água Pluvial",
+        "descricao": "Sistema de águas pluviais com calhas, condutores e tubulações de drenagem",
+        "query_norma": "NBR 10844 águas pluviais drenagem calhas condutores verticais",
+        "busca_textos": ["PLUVIAL", "CALHA", "CONDUTOR", "ÁGUA DA CHUVA", "DRENAGEM"],
+        "busca_layers": ["Hidrossanitário - Água Pluvial"]
+    },
+    {
+        "id": "HIDR-07",
+        "categoria": "Hidrossanitário - Água Quente",
+        "descricao": "Sistema de água quente com tubulações isoladas e identificação de aquecimento",
+        "query_norma": "NBR 5626 instalações água quente tubulação isolamento térmico",
+        "busca_textos": ["ÁGUA QUENTE", "AQUECIMENTO", "BOILER", "AQUECEDOR"],
+        "busca_layers": ["Hidrossanitário - Água Quente"]
+    },
+    {
+        "id": "HIDR-08",
+        "categoria": "Hidrossanitário - Água Fria",
+        "descricao": "Reservação de água (caixas d’água, reservatórios superiores ou inferiores)",
+        "query_norma": "NBR 5626 reservatórios água caixas d'água instalações prediais",
+        "busca_textos": ["CAIXA D'ÁGUA", "RESERVATÓRIO", "TANQUE", "CISTERNA"],
+        "busca_layers": ["Hidrossanitário - Água Fria"]
+    },
+    {
+        "id": "HIDR-09",
+        "categoria": "Hidrossanitário - Gás Encanado",
+        "descricao": "Rede de gás canalizado com tubulações e pontos de consumo",
+        "query_norma": "NBR 15526 instalações internas gás combustível tubulações GLP GN",
+        "busca_textos": ["GÁS", "GLP", "GN", "TUBO GÁS", "REGISTRO GÁS"],
+        "busca_layers": ["Hidrossanitário - Gás Encanado"]
+    },
+    {
+        "id": "HIDR-10",
+        "categoria": "Hidrossanitário - Geral",
+        "descricao": "Compatibilização entre sistemas hidráulicos e arquitetura (furos, shafts e passagens)",
+        "query_norma": "NBR 5626 compatibilização shafts passagens instalações hidráulicas",
+        "busca_textos": ["SHAFT", "FURO", "PRUMADA", "DUTO"],
+        "busca_layers": ["Hidrossanitário - Água Fria", "Hidrossanitário - Esgoto", "Hidrossanitário - Água Pluvial"]
+    }
+    
 ]
 
 REGRAS_VALORES = {
-    "ATR-01": {
-        "tipo": "existe",
-        "campos": [
-            "MALHA TERRA",
-            "MALHA DE ATERRAMENTO",
-            "HASTE COBREADA",
-            "HASTE DE TERRA",
-            "ELETRODO",
-        ],
-    },
-    "ATR-02": {
-        "tipo": "secao_mm2",
-        "minimo": 16,
-        "padrao": r"#([0-9]+)\s*mm",
-        "padrao_alt": r"COBRE\s+N[ÚU].*?#([0-9]+)",
-    },
-    "ATR-03": {
-        "tipo": "existe",
-        "campos": [
-            "SOLDA EXOTERMICA",
-            "CONECTOR SPLIT BOLT",
-            "CONECTOR DE EMENDA",
-            "CONECTOR BIMETALICO",
-            "CONECTORES APROPRIADOS",
-        ],
-    },
-    "ATR-04": {
-        "tipo": "existe",
-        "campos": [
-            "EQUIPOTENCIALIZACAO",
-            "MASSAS METALICAS",
-            "ELETROCALHAS",
-            "ATERRADAS",
-        ],
-    },
+    "ATR-01": {"tipo": "existe","campos": ["MALHA TERRA","MALHA DE ATERRAMENTO","HASTE COBREADA","HASTE DE TERRA","ELETRODO"]},
+    "ATR-02": {"tipo": "secao_mm2","minimo": 16,"padrao": r"#([0-9]+)\s*mm","padrao_alt": r"COBRE\s+N[ÚU].*?#([0-9]+)"},
+    "ATR-03": {"tipo": "existe","campos": ["SOLDA EXOTERMICA","CONECTOR SPLIT BOLT","CONECTOR DE EMENDA","CONECTOR BIMETALICO","CONECTORES APROPRIADOS"]},
+    "ATR-04": {"tipo": "existe","campos": ["EQUIPOTENCIALIZACAO","MASSAS METALICAS","ELETROCALHAS","ATERRADAS"]},
     "ATR-05": {"tipo": "existe", "campos": ["CAIXA DE INSPECAO", "CX. INSPECAO"]},
-    "SPDA-01": {
-        "tipo": "existe",
-        "campos": [
-            "MALHA SPDA",
-            "MALHA DO SPDA",
-            "MALHA DE BARRA CHATA DO SPDA",
-            "TERMINAL",
-        ],
-    },
+    "SPDA-01": {"tipo": "existe","campos": ["MALHA SPDA","MALHA DO SPDA","MALHA DE BARRA CHATA DO SPDA","TERMINAL"]},
     "SPDA-02": {"tipo": "existe", "campos": ["BARRA CHATA", "ALUMINIO", "DESCIDA"]},
     "SPDA-03": {"tipo": "existe", "campos": ["FIXADOR", "REBITE", "PARAFUSO"]},
-    "PROT-01": {
-        "tipo": "existe",
-        "campos": ["QDG", "QUADRO DE DISTRIBUICAO", "PAINEL"],
-    },
+    "PROT-01": {"tipo": "existe","campos": ["QDG", "QUADRO DE DISTRIBUICAO", "PAINEL"]},
     "PROT-02": {"tipo": "icc_ka", "minimo": 10, "padrao": r"ICC\s*=\s*([0-9]+)\s*KA"},
     "PROT-03": {"tipo": "amperagem", "minimo": 400, "padrao": r"([0-9]+)\s*A\b"},
-    "PROT-04": {
-        "tipo": "existe",
-        "campos": ["PADRAO DE ENTRADA", "BAIXA TENSAO", "CENTRO MEDICAO"],
-    },
+    "PROT-04": {"tipo": "existe","campos": ["PADRAO DE ENTRADA", "BAIXA TENSAO", "CENTRO MEDICAO"]},
     "COND-01": {"tipo": "existe_todos", "campos": ["EPR", "90", "1,0KV", "ISOL"]},
     "COND-02": {"tipo": "existe", "campos": ["TERRA", "ATERRAMENTO", "PROTECAO"]},
     "COND-03": {"tipo": "existe", "campos": ["NEUTRO"]},
     "CIRC-01": {"tipo": "regex", "padrao": r"CS-[0-9]+"},
     "CIRC-02": {"tipo": "existe", "campos": ["AR COND", "BTU"]},
     "CIRC-03": {"tipo": "existe_todos", "campos": ["CARGA", "CORRENTE"]},
-    "DOC-01": {
-        "tipo": "existe",
-        "campos": ["ART", "MEMORIA DE CALCULO", "PROFISSIONAL"],
-    },
+    "DOC-01": {"tipo": "existe","campos": ["ART", "MEMORIA DE CALCULO", "PROFISSIONAL"]},
     "DOC-02": {"tipo": "existe", "campos": ["PROJETO BASICO", "VALIDACAO"]},
+    "EST-02": {"tipo": "existe", "campos": ["PILAR", "P1", "P2", "FCK"]},
+    "EST-03": {"tipo": "existe", "campos": ["VIGA", "V1", "ESTRIBO"]},
+    "EST-04": {"tipo": "existe", "campos": ["LAJE", "L1", "EPS"]},
+    "EST-05": {"tipo": "existe", "campos": ["ALVENARIA", "BLOCO", "PRISMA", "GRAUTE"]},
+    "HIDR-01": {"tipo": "existe", "campos": ["AGUA FRIA", "TUBO", "PVC", "RAMAL", "DISTRIBUICAO"]},
+    "HIDR-02": {"tipo": "existe", "campos": ["LAVATORIO", "CHUVEIRO", "TORNEIRA", "CONSUMO"]},
+    "HIDR-03": {"tipo": "existe", "campos": ["TUBO DE QUEDA", "ESGOTO", "DN 100", "RAMAL DE DESCARGA"]},
+    "HIDR-04": {"tipo": "existe", "campos": ["CAIXA DE GORDURA", "CAIXA DE INSPECAO", "CAIXA DE PASSAGEM"]},
+    "HIDR-05": {"tipo": "existe", "campos": ["VENTILACAO", "TUBO VENT", "COLUNA VENT", "RESPIRO"]},
+    "HIDR-06": {"tipo": "existe", "campos": ["CALHA", "CONDUTOR", "AGUA PLUVIAL", "TUBO DE QUEDA PLUVIAL", "PLUVIAL"]},
+    "HIDR-07": {"tipo": "existe", "campos": ["AGUA QUENTE", "AQUECIMENTO", "BOILER", "AQUECEDOR"]},
+    "HIDR-08": {"tipo": "existe", "campos": ["RESERVATORIO", "CAIXA D'AGUA", "CAIXA DAGUA", "CASTELO", "CISTERNA"]},
+    "HIDR-09": {"tipo": "existe", "campos": ["GAS", "GLP", "GN", "TUBO GAS", "REGISTRO GAS"]},
+    "HIDR-10": {"tipo": "existe", "campos": ["SHAFT", "PASSAGEM", "FURO", "PRUMADA", "DUTO"]}
 }
 
 
@@ -463,13 +533,13 @@ def executar_agente(dados_extracao: dict) -> str:
             f"          Evidências: {textos_found} texto(s) | {layers_found} layer(s) encontrado(s): {evidencias['layers_encontrados']} | {layers_miss} layer(s) ausente(s): {evidencias['layers_ausentes']}"
         )
 
-        if chroma_vazio:  # se o chroma tiver vazio, marca tudo como não conforme
+        if chroma_vazio:  
             avaliacao = {
                 "status": "NÃO CONFORME",
                 "justificativa": "Nenhuma norma técnica está indexada na base de conhecimento (ChromaDB vazio). Não foi possível realizar a conferência normativa.",
                 "recomendacao": "Adicione os documentos das NBRs/NRs ao ChromaDB e execute a análise novamente.",
             }
-        else:  # se o chroma não estiver vazio
+        else:  
 
             norma_ref_match = re.search(
                 r"(NBR\s*\d+(?:[/-]\d+)?|NR-\d+)", verif["query_norma"], re.IGNORECASE
@@ -480,11 +550,11 @@ def executar_agente(dados_extracao: dict) -> str:
 
             if (
                 not norma_presente
-            ):  # se a norma não estiver no chroma, marca como não conforme
+            ):  
 
                 norma_label = norma_ref or "norma não identificada"
                 avaliacao = {
-                    "status": "NÃO CONFORME",
+                    "status": "INCONCLUSIVO",
                     "justificativa": f"A norma referenciada ({norma_label}) não está indexada na base de conhecimento (ChromaDB). Conferência normativa não realizada.",
                     "recomendacao": f"Indexe o documento da {norma_label} no ChromaDB para habilitar esta verificação.",
                 }
@@ -561,7 +631,7 @@ def executar_agente(dados_extracao: dict) -> str:
         "insights": resultados,
         "normas_chroma_codigos": sorted(
             normas_utilizadas
-        ),  # códigos extraídos dos metadados do ChromaDB
+        ),  
     }
 
 
@@ -606,16 +676,15 @@ def _limpar_texto_dxf(texto: str) -> str:
 
 def _match_texto_flexivel(texto_limpo: str, termo: str) -> bool:
     t = _remover_acentos(termo.upper().strip())
-    if t in texto_limpo:
+    padrao = r'\b' + re.escape(t) + r'\b'
+    if re.search(padrao, texto_limpo):
         return True
-    t_sem_espacos = t.replace(" ", "")
-    texto_sem_espacos = texto_limpo.replace(" ", "")
-    if t_sem_espacos in texto_sem_espacos:
-        return True
+    
     palavras_termo = t.split()
     if len(palavras_termo) > 1:
-        if all(p in texto_limpo for p in palavras_termo):
+        if all(re.search(r'\b' + re.escape(p) + r'\b', texto_limpo) for p in palavras_termo):
             return True
+            
     return False
 
 
@@ -686,16 +755,27 @@ def _norma_esta_no_chroma(norma_ref: str | None, normas_chroma: set) -> bool:
     if not norma_ref or not normas_chroma:
         return False
 
-    def _norm(s: str) -> str:  # normaliza para comparação
-        return re.sub(r"\s+", "", s.upper())
+    def _norm(s: str) -> str:
+        s = _remover_acentos(s.upper())
+        s = re.sub(r"[^A-Z0-9]", "", s)
+        return s
 
     ref_norm = _norm(norma_ref)
     return any(_norm(n) == ref_norm or ref_norm in _norm(n) for n in normas_chroma)
 
+_CHROMA_CACHE = {}
 
 def _consultar_norma(query: str, db: Chroma, k: int = 5) -> str:
+    key = (query.strip().lower(), k)
+
+    if key in _CHROMA_CACHE:
+        return _CHROMA_CACHE[key]
+
     docs = db.similarity_search(query, k=k)
-    return "\n\n---\n\n".join(d.page_content[:600] for d in docs)
+    resultado = "\n\n---\n\n".join(d.page_content[:600] for d in docs)
+
+    _CHROMA_CACHE[key] = resultado
+    return resultado
 
 
 def _remover_acentos(texto: str) -> str:
@@ -741,7 +821,7 @@ def _validar_valores(verificacao_id: str, evidencias: dict) -> dict:
     regra = REGRAS_VALORES.get(verificacao_id)
     if not regra:
         return {
-            "ok": False,
+            "ok": None,
             "detalhe": "Sem regra de validação definida.",
             "valores": [],
         }
@@ -894,28 +974,155 @@ def _avaliar_com_llm(
         else "Sem validação automática."
     )
 
-    prompt = f"""Você é um auditor técnico de normas elétricas brasileiras.
+#     prompt = f"""Você é um auditor técnico de normas elétricas brasileiras.
 
-Avalie o critério abaixo na planta elétrica e retorne APENAS JSON.
+# Avalie o critério abaixo na planta elétrica e retorne APENAS JSON.
 
-CRITÉRIO: {verificacao['descricao']}
+# CRITÉRIO: {verificacao['descricao']}
 
-TRECHO DA NORMA:
-{contexto_norma}
+# TRECHO DA NORMA:
+# {contexto_norma}
 
-EVIDÊNCIAS ENCONTRADAS NA PLANTA:
-Textos: {ocorrencias_str}
-Layers presentes: {layers_enc}
-Layers ausentes: {layers_aus}
-{valores_info}
+# EVIDÊNCIAS ENCONTRADAS NA PLANTA:
+# Textos: {ocorrencias_str}
+# Layers presentes: {layers_enc}
+# Layers ausentes: {layers_aus}
+# {valores_info}
 
-REGRAS DE AVALIAÇÃO:
-- CONFORME: quando há evidência clara de que o requisito foi atendido (layers presentes E textos confirmam valores adequados)
-- NÃO CONFORME: quando não há evidência suficiente, ou os valores encontrados são inferiores ao mínimo da norma
-- INCONCLUSIVO: apenas quando há evidência parcial que não permite conclusão definitiva
+# REGRAS DE AVALIAÇÃO:
+# - CONFORME: quando há evidência clara de que o requisito foi atendido (layers presentes E textos confirmam valores adequados)
+# - NÃO CONFORME: quando não há evidência suficiente, ou os valores encontrados são inferiores ao mínimo da norma
+# - INCONCLUSIVO: apenas quando há evidência parcial que não permite conclusão definitiva
 
-Responda SOMENTE este JSON, sem texto antes ou depois:
-{{"status":"CONFORME"|"NÃO CONFORME"|"INCONCLUSIVO","justificativa":"...","recomendacao":"..."}}"""
+# Responda SOMENTE este JSON, sem texto antes ou depois:
+# {{"status":"CONFORME"|"NÃO CONFORME"|"INCONCLUSIVO","justificativa":"...","recomendacao":"..."}}"""
+
+    prompt = f"""
+    Você é um auditor técnico de normas elétricas brasileiras (ABNT e NR), atuando como sistema de pré-análise para revisão por engenheiro responsável.
+
+    Sua função é analisar critérios técnicos em plantas elétricas com base nas evidências fornecidas e no trecho normativo recuperado via RAG.
+
+    Você NÃO substitui o engenheiro.
+    Você NÃO emite laudo final.
+    Você NÃO deve inventar informações ausentes.
+
+    Seu papel é:
+    - identificar evidências relevantes;
+    - correlacionar com a norma fornecida;
+    - classificar tecnicamente o atendimento do requisito;
+    - priorizar decisão técnica quando houver evidência suficiente, mesmo que parcial.
+
+    ======================================================================
+    DADOS DE ENTRADA
+    ======================================================================
+
+    CRITÉRIO A SER AVALIADO:
+    {verificacao['descricao']}
+
+    TRECHO DA NORMA CONSULTADA:
+    {contexto_norma}
+
+    EVIDÊNCIAS ENCONTRADAS NA PLANTA:
+
+    Textos:
+    {ocorrencias_str}
+
+    Layers presentes:
+    {layers_enc}
+
+    Layers ausentes:
+    {layers_aus}
+
+    {valores_info}
+
+    ======================================================================
+    REGRAS DE AVALIAÇÃO
+    ======================================================================
+
+    1. CONFORME:
+    Deve ser atribuído quando houver evidência suficiente para sustentar atendimento do requisito, incluindo:
+    - evidência explícita (texto técnico ou valor numérico);
+    - combinação coerente de evidências (textos + valores + contexto normativo);
+    - evidência parcial, desde que tecnicamente compatível com a norma.
+
+    Se existir evidência positiva relevante, deve haver tendência à classificação CONFORME, mesmo que a informação não esteja completa.
+
+    2. NÃO CONFORME:
+    Somente pode ser atribuído quando houver evidência objetiva e explícita de violação da norma, como:
+    - valores explicitamente abaixo do exigido pela norma;
+    - presença de elemento incompatível com o requisito normativo;
+    - contradição direta com o trecho normativo consultado;
+    - erro técnico explicitamente indicado nas evidências.
+
+    IMPORTANTE:
+    - NÃO CONFORME NÃO pode ser atribuído por ausência de informação.
+    - NÃO CONFORME NÃO pode ser atribuído por ausência de layers ou ausência de textos.
+    - NÃO CONFORME exige prova positiva de falha.
+
+    3. INCONCLUSIVO (USO RESTRITO):
+    Utilizar apenas quando todas as condições abaixo forem verdadeiras:
+    - não há evidência suficiente positiva ou negativa;
+    - o critério depende de informação inexistente na planta e não inferível;
+    - não é possível correlacionar com a norma mesmo parcialmente.
+
+    INCONCLUSIVO não deve ser usado apenas por ausência de layers ou falta de detalhamento parcial.
+
+    ======================================================================
+    CRITÉRIO DE INTERPRETAÇÃO
+    ======================================================================
+
+    - Evidências textuais e numéricas têm prioridade máxima.
+    - Layers são apenas metadados auxiliares de contexto.
+    - Layers não são evidência normativa e não podem ser usados isoladamente para decisão.
+    - A ausência de layers não deve ser interpretada como não conformidade.
+
+    - A ausência de evidência NÃO pode ser interpretada como NÃO CONFORMIDADE.
+    - É proibido inferir falha técnica com base apenas em “não encontrado”, “não presente” ou “layers ausentes”.
+
+    - NÃO CONFORME só pode ser atribuído com base em evidência positiva de erro ou violação normativa.
+
+    - Não utilize conhecimento externo além da norma fornecida.
+    - Não invente valores, requisitos ou interpretações não suportadas pelas evidências.
+
+    Regra de decisão:
+    - Na dúvida entre CONFORME e INCONCLUSIVO, prefira CONFORME se houver evidência positiva relevante.
+    - Na dúvida entre NÃO CONFORME e INCONCLUSIVO, prefira INCONCLUSIVO.
+    - INCONCLUSIVO é o estado padrão quando não há prova de conformidade nem de não conformidade.
+
+    - O sistema deve priorizar evitar falsos NÃO CONFORMES.
+    - Falsos negativos (marcar como NÃO CONFORME sem prova) são mais graves do que INCONCLUSIVOS.
+
+    ======================================================================
+    USO OBRIGATÓRIO DA NORMA NA JUSTIFICATIVA
+    ======================================================================
+
+    A justificativa deve sempre mencionar explicitamente a norma consultada, por exemplo:
+    - ABNT NBR 5410:2004
+    - ABNT NBR 5419-2:2015
+    - ABNT NBR 6118:2014
+    - NR 10:2004
+
+    A análise deve sempre estar vinculada ao trecho normativo fornecido via RAG.
+
+    ======================================================================
+    INSTRUÇÕES DE SAÍDA
+    ======================================================================
+
+    - Responda somente em JSON válido.
+    - Não inclua texto fora do JSON.
+    - Não cite layers na justificativa.
+    - Não repita o prompt.
+
+    ======================================================================
+    FORMATO DE RESPOSTA OBRIGATÓRIO
+    ======================================================================
+
+    {{
+    "status": "CONFORME | NÃO CONFORME | INCONCLUSIVO",
+    "justificativa": "Explicação técnica objetiva citando explicitamente a norma consultada e as evidências utilizadas.",
+    "recomendacao": "Ação técnica objetiva e acionável."
+    }}
+    """
 
     resposta_raw = llm.invoke(prompt)
 
