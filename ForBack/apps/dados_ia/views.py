@@ -11,7 +11,7 @@ from aiohttp import request
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from rest_framework.parsers import MultiPartParser, JSONParser
+from rest_framework.parsers import MultiPartParser, JSONParser, FormParser
 from django.http import FileResponse, HttpResponse, JsonResponse
 import time
 import hashlib
@@ -326,6 +326,83 @@ class StatusRelatorio(APIView):
             return Response({"status": "pendente"})
         
         return Response({"status": "concluido"})
+
+class historicoRelatorio(APIView):
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get(self, request):
+        projeto_id = request.query_params.get("projeto_id")
+
+        if not projeto_id:
+            return Response(
+                {"erro": "O parâmetro 'projeto_id' é obrigatório"},
+                status=400
+            )
+
+        try:
+            projeto = Projeto.objects.get(id_projeto=projeto_id)
+        except Projeto.DoesNotExist:
+            return Response(
+                {"erro": "Projeto não encontrado."},
+                status=404
+            )
+
+        relatorios = (
+            RelatorioConformidade.objects
+            .filter(projeto=projeto)
+            .order_by("-criado_em")
+        )
+
+        data = []
+
+        for relatorio in relatorios:
+            data.append({
+                "id": relatorio.id,
+                "nome_arquivo": relatorio.nome_arquivo,
+                "criado_em": relatorio.criado_em,
+            })
+
+        return Response(data)
+    
+
+    def post(self, request):
+        projeto_id = request.data.get("projeto_id")
+        arquivo = request.FILES.get("arquivo")
+
+        if not projeto_id:
+            return Response(
+                {"erro": "projeto_id é obrigatório"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not arquivo:
+            return Response(
+                {"erro": "arquivo é obrigatório"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            projeto = Projeto.objects.get(id_projeto=projeto_id)
+        except Projeto.DoesNotExist:
+            return Response(
+                {"erro": "Projeto não encontrado."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        relatorio = RelatorioConformidade.objects.create(
+            projeto=projeto,
+            nome_arquivo=arquivo.name,
+            caminho_arquivo=f"relatorios/{arquivo.name}",
+            arquivo=arquivo
+        )
+
+        return Response(
+            {
+                "mensagem": "Nova versão enviada",
+                "relatorio_id": relatorio.id
+            },
+            status=status.HTTP_201_CREATED
+        )
 
         
 class inserirNorma(APIView):
