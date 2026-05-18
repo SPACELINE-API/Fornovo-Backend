@@ -443,7 +443,7 @@ def gerar_especificacao(path_man: dict, path_cad: dict) -> io.BytesIO:
     arvore = _extrair_arvore(TEMPLATE_PATH)
 
     print("\n[OLLAMA] Verificando se Ollama está pronto...")
-    ensure_ollama_ready()
+    ensure_ollama_ready([MODELO_LLM])
     print("[OLLAMA] Ollama OK.")
 
     textos_adaptados = _gerar_textos_llm(arvore, path_man, path_cad)

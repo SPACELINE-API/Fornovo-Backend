@@ -717,9 +717,13 @@ class SalvarEspecificacao(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+            if isinstance(dados_arquivo, list):
+                dados_arquivo = {"ambientes": dados_arquivo}
+            elif isinstance(dados_arquivo, dict) and "ambientes" not in dados_arquivo:
+                dados_arquivo = {"ambientes": [dados_arquivo]}
+
             if not dados_dxf:
                 dados_dxf = {}
-
 
             dados_arquivo["nome"]       = getattr(projeto, "nome_projeto", "") or "Não informado"
             dados_arquivo["cliente"]    = getattr(projeto, "cliente",      "") or "Não informado"
