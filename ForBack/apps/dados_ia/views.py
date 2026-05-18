@@ -4,14 +4,14 @@ import tempfile
 import traceback
 import ctypes
 import pickle
-import re # import de regex pra interpretação do texto do relatório
+import re 
 from pathlib import Path
 
 from aiohttp import request
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from rest_framework.parsers import MultiPartParser, JSONParser
+from rest_framework.parsers import MultiPartParser, JSONParser, FormParser
 from django.http import FileResponse, HttpResponse, JsonResponse
 import time
 import hashlib
@@ -239,17 +239,13 @@ class ProcessarProjetoIA(APIView):
             relatorio_md = retorno_ia.get("relatorio_md", "")
             if relatorio_md:
                 try:
-                    nome_projeto_limpo = re.sub(r'[^a-zA-Z0-9]+', '_', projeto.nome_projeto).strip('_').lower()
-                    nome = f"relatorio_{nome_projeto_limpo}.docx"
+                    nome = f"relatorio_{str(projeto_id)[:8]}.docx"
                     docx_bytes = gerar_docx_bytes(relatorio_md)
-                    hash_arquivo = hashlib.sha256(docx_bytes).hexdigest()
-                    Arquivo.objects.create(
-                        projeto=projeto,
-                        nome_arquivo=nome,
-                        hash_arquivo=hash_arquivo,
-                        tipo_arquivo='docx',
-                        caminho_arquivo=ContentFile(docx_bytes, name=nome)
-                    )
+                    relatorio = RelatorioConformidade(projeto=projeto)
+                    relatorio.arquivo.save(nome, ContentFile(docx_bytes), save=False)
+                    relatorio.nome_arquivo = nome
+                    relatorio.caminho_arquivo = relatorio.arquivo.name
+                    relatorio.save()
                 except Exception as e:
                     print(f"Erro ao salvar relatório: {e}")
                     
@@ -296,7 +292,7 @@ class DownloadRelatorio(APIView):
         except Projeto.DoesNotExist:
             return Response({"erro": "Projeto não encontrado."}, status=404)
 
-        relatorio = Arquivo.objects.filter(projeto=projeto, tipo_arquivo='docx').last()
+        relatorio = RelatorioConformidade.objects.filter(projeto=projeto).order_by('criado_em').last()
 
         if not relatorio:
             return Response({"erro": "Nenhum relatório encontrado."}, status=404)
@@ -305,7 +301,7 @@ class DownloadRelatorio(APIView):
             return Response({"erro": "Arquivo físico não encontrado."}, status=404)
         
         return FileResponse(
-            relatorio.caminho_arquivo.open("rb"),
+            relatorio.arquivo.open("rb"),
             as_attachment=True,
             filename=relatorio.nome_arquivo,
             content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -324,12 +320,89 @@ class StatusRelatorio(APIView):
         except Projeto.DoesNotExist:
             return Response({"erro": "Projeto não encontrado."}, status=404)
 
-        relatorio = Arquivo.objects.filter(projeto=projeto, tipo_arquivo='docx').last()
+        relatorio = RelatorioConformidade.objects.filter(projeto=projeto).order_by('criado_em').first()
 
         if not relatorio:
             return Response({"status": "pendente"})
         
         return Response({"status": "concluido"})
+
+class historicoRelatorio(APIView):
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get(self, request):
+        projeto_id = request.query_params.get("projeto_id")
+
+        if not projeto_id:
+            return Response(
+                {"erro": "O parâmetro 'projeto_id' é obrigatório"},
+                status=400
+            )
+
+        try:
+            projeto = Projeto.objects.get(id_projeto=projeto_id)
+        except Projeto.DoesNotExist:
+            return Response(
+                {"erro": "Projeto não encontrado."},
+                status=404
+            )
+
+        relatorios = (
+            RelatorioConformidade.objects
+            .filter(projeto=projeto)
+            .order_by("-criado_em")
+        )
+
+        data = []
+
+        for relatorio in relatorios:
+            data.append({
+                "id": relatorio.id,
+                "nome_arquivo": relatorio.nome_arquivo,
+                "criado_em": relatorio.criado_em,
+            })
+
+        return Response(data)
+    
+
+    def post(self, request):
+        projeto_id = request.data.get("projeto_id")
+        arquivo = request.FILES.get("arquivo")
+
+        if not projeto_id:
+            return Response(
+                {"erro": "projeto_id é obrigatório"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not arquivo:
+            return Response(
+                {"erro": "arquivo é obrigatório"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            projeto = Projeto.objects.get(id_projeto=projeto_id)
+        except Projeto.DoesNotExist:
+            return Response(
+                {"erro": "Projeto não encontrado."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        relatorio = RelatorioConformidade.objects.create(
+            projeto=projeto,
+            nome_arquivo=arquivo.name,
+            caminho_arquivo=f"relatorios/{arquivo.name}",
+            arquivo=arquivo
+        )
+
+        return Response(
+            {
+                "mensagem": "Nova versão enviada",
+                "relatorio_id": relatorio.id
+            },
+            status=status.HTTP_201_CREATED
+        )
 
         
 class inserirNorma(APIView):
