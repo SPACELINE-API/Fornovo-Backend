@@ -283,6 +283,7 @@ class ProcessarProjetoIA(APIView):
 class DownloadRelatorio(APIView):
     def get(self, request):
         projeto_id = request.query_params.get("projeto_id")
+        relatorio_id = request.query_params.get('relatorio_id')
 
         if not projeto_id:
             return Response({"erro": "O parâmetro 'projeto_id' é obrigatório"}, status=400)
@@ -292,7 +293,7 @@ class DownloadRelatorio(APIView):
         except Projeto.DoesNotExist:
             return Response({"erro": "Projeto não encontrado."}, status=404)
 
-        relatorio = RelatorioConformidade.objects.filter(projeto=projeto).order_by('criado_em').last()
+        relatorio = RelatorioConformidade.objects.filter(projeto=projeto, id=relatorio_id).order_by('criado_em').last()
 
         if not relatorio:
             return Response({"erro": "Nenhum relatório encontrado."}, status=404)
