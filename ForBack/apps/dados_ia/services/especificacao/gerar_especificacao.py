@@ -15,17 +15,32 @@ from docx.shared import Pt, RGBColor, Inches
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from langchain_ollama import OllamaLLM
+import pandas as pd
 
 from apps.dados_ia.services.ollama_installer import ensure_ollama_ready
+
+from apps.dados_ia.services.memorial.pandas.levantamento_campo import levantamento_campo
+from apps.dados_ia.services.memorial.pandas.serviços_preliminares import servicos_preliminares
+from apps.dados_ia.services.memorial.pandas.estruturas_manual import estruturas
+from apps.dados_ia.services.memorial.pandas.alvenarias import alvenarias
+from apps.dados_ia.services.memorial.pandas.acabamentos import acabamentos
+from apps.dados_ia.services.memorial.pandas.inst_eletricas import eletricas
+from apps.dados_ia.services.memorial.pandas.inst_mecanica import mecanica
+from apps.dados_ia.services.memorial.pandas.inst_pressurizadas import pressurizada
+from apps.dados_ia.services.memorial.pandas.inst_segurança import seguranca
+from apps.dados_ia.services.memorial.pandas.comunicações_ambientais import ambientais
+from apps.dados_ia.services.memorial.pandas.paisagismos import paisagismo
+from apps.dados_ia.services.memorial.pandas.movimentosolo_manual import movimento_solo
+from apps.dados_ia.services.memorial.pandas.inst_telefonia import telefonia
 
 logger = logging.getLogger(__name__)
 
 TEMPLATE_PATH = Path(__file__).parent / "especificacao_tecnica.docx"
 
-MODELO_LLM = "llama3.1:8b"
+MODELO_LLM = "gpt-oss:120b-cloud"
 
 _MAX_TEMPLATE_CHARS = 600
-_MAX_DADOS_CHARS = 2000
+_MAX_DADOS_CHARS = 4000
 _NUM_PREDICT = 1024
 
 CAMPOS_POR_GRUPO: dict[str, list[str]] = {
@@ -41,6 +56,24 @@ CAMPOS_POR_GRUPO: dict[str, list[str]] = {
     "COBERTURA":             ["tipoEstrutura", "tipoTelhamento", "espessura", "inclinacao"],
     "DESCRICAO DOS LOCAIS":  ["nome", "area", "comprimento", "largura", "altura"],
     "AMBIENTES":             ["nome", "area", "comprimento", "largura", "altura"],
+}
+
+ABA_POR_GRUPO: dict[str, str] = {
+    "SERVICOS PRELIMINARES": "Serviços Preliminares",
+    "MOVIMENTOS DE SOLO": "Movimento de Solo",
+    "SISTEMAS ESTRUTURAIS": "Estruturas",
+    "ALVENARIAS": "Alvenarias",
+    "ACABAMENTOS": "Acabamentos",
+    "HIDRAULICA": "Inst. Hidraulica",
+    "ELETRICA": "Inst. Elétricas",
+    "REDE": "Inst. de Telefonia e Rede",
+    "CAMERAS": "Inst. de Telefonia e Rede",
+    "MECANICA": "Inst. Mecânicas",
+    "PRESSURIZADA": "Inst. Pressurizadas",
+    "SEGURANCA": "Inst. de Segurança",
+    "COBERTURA": "Estruturas", 
+    "DESCRICAO DOS LOCAIS": "Levantamento de Campo",
+    "AMBIENTES": "Levantamento de Campo",
 }
 
 
@@ -91,14 +124,104 @@ def _extrair_arvore(template_path: Path) -> list[dict]:
     return arvore
 
 
-def _dados_para_grupo(grupo: str, path_man: dict, path_cad: dict) -> dict:
+def _gerar_dados_estruturados(path_man: dict, path_cad: dict) -> dict:
+    pm = path_man.copy()
+    if isinstance(pm, list):
+        pm = {"ambientes": pm}
+    elif isinstance(pm, dict) and "ambientes" not in pm:
+        pm = {"ambientes": [pm]}
+    
+    dfs_levantamento = list(levantamento_campo(pm, path_cad))
+    df_servicos = list(servicos_preliminares(pm, path_cad))
+    tabela_map_solo = movimento_solo(pm, path_cad)
+    tabela_map_estruturas = estruturas(pm, path_cad)
+    tabela_map_alvenarias = alvenarias(pm, path_cad)
+    df_acabamentos = list(acabamentos(pm, path_cad))
+    tabela_map_eletrica = eletricas(pm, path_cad)
+    df_mecanica = list(mecanica())
+    df_pressurizada = pressurizada()
+    df_seguranca = list(seguranca(path_cad))
+    df_ambientais = ambientais()
+    df_tel = telefonia(pm, path_cad)
+    df_paisagismo = paisagismo()
+
+    mapa_abas = {
+        "Levantamento de Campo": dfs_levantamento,
+        "Serviços Preliminares": df_servicos,
+        "Movimento de Solo": tabela_map_solo,
+        "Estruturas": tabela_map_estruturas,
+        "Alvenarias": tabela_map_alvenarias,
+        "Acabamentos": df_acabamentos,
+        "Inst. Hidraulica": [],
+        "Inst. Elétricas": tabela_map_eletrica,
+        "Inst. de Telefonia e Rede": df_tel,
+        "Inst. Mecânicas": df_mecanica,
+        "Inst. Pressurizadas": df_pressurizada,
+        "Inst. de Segurança": df_seguranca,
+        "Comunicações Ambientais": df_ambientais,
+        "Paisagismos": df_paisagismo,
+    }
+    return mapa_abas
+
+def _resumir_conteudo(conteudo: Any) -> list[dict]:
+    resumo = []
+    itens = []
+    if isinstance(conteudo, dict):
+        for titulo, valor in conteudo.items():
+            if isinstance(valor, (list, tuple)):
+                itens.append((titulo, valor[0]))
+            else:
+                itens.append((titulo, valor))
+    elif isinstance(conteudo, list):
+        for i, item in enumerate(conteudo):
+            if isinstance(item, tuple):
+                if len(item) >= 2:
+                    itens.append((item[0], item[1]))
+                else:
+                    itens.append((None, item[0]))
+            else:
+                itens.append((None, item))
+    else:
+        itens = [(None, conteudo)]
+
+    for titulo, df in itens:
+        if not isinstance(df, pd.DataFrame):
+            continue
+        if df.empty:
+            continue
+
+        if isinstance(df.columns, pd.MultiIndex):
+            df_flat = df.copy()
+            df_flat.columns = [' '.join([str(c) for c in col if c]).strip() for col in df.columns.values]
+        else:
+            df_flat = df.copy()
+
+        records = df_flat.to_dict('records')
+        clean_records = []
+        for rec in records:
+            clean_rec = {}
+            for k, v in rec.items():
+                if pd.notnull(v) and str(v).strip() != "":
+                    clean_rec[k] = v
+            if clean_rec:
+                clean_records.append(clean_rec)
+        
+        if clean_records:
+            resumo.append({"tabela": titulo or "Dados", "itens": clean_records})
+    
+    return resumo
+
+
+def _dados_para_grupo(grupo: str, path_man: dict, path_cad: dict, dados_estruturados: dict) -> dict:
     ambientes = path_man.get("ambientes") or []
 
     grupo_norm = _normalizar(grupo)
     campos_interesse: list[str] = []
+    aba_interesse = ""
     for chave, campos in CAMPOS_POR_GRUPO.items():
         if chave in grupo_norm:
             campos_interesse = campos
+            aba_interesse = ABA_POR_GRUPO.get(chave, "")
             break
 
     dados: dict[str, Any] = {}
@@ -126,18 +249,11 @@ def _dados_para_grupo(grupo: str, path_man: dict, path_cad: dict) -> dict:
         "data_fim":    path_man.get("data_fim") or "Não informada",
     }
 
+    if aba_interesse and aba_interesse in dados_estruturados:
+        dados["_tabelas_calculadas"] = _resumir_conteudo(dados_estruturados[aba_interesse])
+
     if path_cad:
         dados["_cad_resumo"] = path_cad.get("resumo", {})
-        if "textos" in path_cad:
-            dados["_cad_textos_relevantes"] = [
-                t for t in path_cad["textos"]
-                if any(kw.lower() in str(t).lower() for kw in campos_interesse)
-            ]
-        if "blocos" in path_cad:
-            dados["_cad_blocos_relevantes"] = [
-                b for b in path_cad["blocos"]
-                if any(kw.lower() in str(b).lower() for kw in campos_interesse)
-            ]
 
     return dados
 
@@ -215,7 +331,7 @@ def _parsear_json_llm(resposta_raw: str, sec_id: str) -> dict[str, str]:
     return {}
 
 
-def _gerar_textos_llm(arvore: list[dict], path_man: dict, path_cad: dict) -> dict[str, str]:
+def _gerar_textos_llm(arvore: list[dict], path_man: dict, path_cad: dict, dados_estruturados: dict) -> dict[str, str]:
     llm = _criar_llm()
     textos: dict[str, str] = {}
 
@@ -228,7 +344,7 @@ def _gerar_textos_llm(arvore: list[dict], path_man: dict, path_cad: dict) -> dic
 
     for grupo, secoes in grupos.items():
         print(f"\n[GRUPO] Processando grupo: '{grupo}' ({len(secoes)} seções)")
-        dados = _dados_para_grupo(grupo, path_man, path_cad)
+        dados = _dados_para_grupo(grupo, path_man, path_cad, dados_estruturados)
 
         for sec in secoes:
             contador += 1
@@ -446,7 +562,16 @@ def gerar_especificacao(path_man: dict, path_cad: dict) -> io.BytesIO:
     ensure_ollama_ready([MODELO_LLM])
     print("[OLLAMA] Ollama OK.")
 
-    textos_adaptados = _gerar_textos_llm(arvore, path_man, path_cad)
+    print("\n[DADOS] Gerando tabelas estruturadas via motor de memorial...")
+    try:
+        dados_estruturados = _gerar_dados_estruturados(path_man, path_cad)
+        print("[DADOS] Estruturação geométrica/CAD concluída.")
+    except Exception as e:
+        logger.error(f"Erro ao gerar dados estruturados: {e}")
+        print(f"[AVISO] Falha na estruturação do memorial. Usando fallback. Erro: {e}")
+        dados_estruturados = {}
+
+    textos_adaptados = _gerar_textos_llm(arvore, path_man, path_cad, dados_estruturados)
 
     print("\n[DOC] Criando documento Word...")
     doc = Document()
