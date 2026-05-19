@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 TEMPLATE_PATH = Path(__file__).parent / "especificacao_tecnica.docx"
 
-MODELO_LLM = "gpt-oss:120b-cloud"
+MODELO_LLM = "llama3.1:8b"
 
 _MAX_TEMPLATE_CHARS = 600
 _MAX_DADOS_CHARS = 4000
