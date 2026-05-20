@@ -50,6 +50,15 @@ class listarUsuario(APIView):
             })
         return Response(data)
 
+class listarQuantidadeUsuario(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        usuarios = Usuario.objects.all()
+        data = {
+            "total": usuarios.count(),
+        }
+        return Response(data)
+
 class atualizarStatusUsuario(APIView):
     permission_classes = [IsAuthenticated, IsAdm]
     def patch(self, request, id):
