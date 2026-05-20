@@ -361,6 +361,8 @@ class historicoRelatorio(APIView):
                 "id": relatorio.id,
                 "nome_arquivo": relatorio.nome_arquivo,
                 "criado_em": relatorio.criado_em,
+                "responsavel": relatorio.responsavel,
+                "geracao_manual": relatorio.geracao_manual
             })
 
         return Response(data)
@@ -369,6 +371,10 @@ class historicoRelatorio(APIView):
     def post(self, request):
         projeto_id = request.data.get("projeto_id")
         arquivo = request.FILES.get("arquivo")
+        usuario = request.user
+        nome_usuario = usuario.nome_usuario
+
+        print(nome_usuario)
 
         if not projeto_id:
             return Response(
@@ -394,7 +400,9 @@ class historicoRelatorio(APIView):
             projeto=projeto,
             nome_arquivo=arquivo.name,
             caminho_arquivo=f"relatorios/{arquivo.name}",
-            arquivo=arquivo
+            arquivo=arquivo,
+            responsavel=nome_usuario,
+            geracao_manual=True
         )
 
         return Response(
