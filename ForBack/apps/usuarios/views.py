@@ -4,6 +4,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from apps.usuarios.auth.permissions import IsAdm
 from rest_framework.response import Response
 from .models import Usuario
+from apps.projetos.services.notificacoes import (
+    usuario_da_requisicao,
+    registrar_novo_funcionario,
+)
 from django.contrib.auth.hashers import make_password, check_password
 from django.conf import settings
 import jwt
@@ -23,6 +27,7 @@ class criarUsuario(APIView):
                 nivel_usuario=request.data.get('nivelUsuario'),
                 status=request.data.get('status', 'Ativo')
             )
+            registrar_novo_funcionario(usuario, usuario_da_requisicao(request))
             return Response({
                 "mensagem": "Usuário criado com sucesso",
                 "id": usuario.id_usuario,

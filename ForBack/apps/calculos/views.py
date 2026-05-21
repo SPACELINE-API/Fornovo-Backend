@@ -16,6 +16,10 @@ from django.conf import settings
 from django.db import transaction
 import json
 from rest_framework.parsers import MultiPartParser
+from apps.projetos.services.notificacoes import (
+    usuario_da_requisicao,
+    registrar_levantamento_campo,
+)
 
 def to_int(value):
     return int(value) if value not in ["", None] else 0
@@ -234,6 +238,7 @@ class levantamentoCampo(APIView):
                         telhamento=m.get("tipoTelhamento"),
                     )
 
+            registrar_levantamento_campo(projeto, usuario_da_requisicao(request))
             return Response({"message": "Salvo com sucesso"}, status=201)
         except Exception as e:
             return Response({"error": str(e)}, status=400)
