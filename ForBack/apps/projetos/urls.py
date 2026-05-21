@@ -6,11 +6,13 @@ from .views import (
     verificarArquivo, AtualizarStatusProjeto,
     UploadEspecificacao, BaixarEspecificacao, ListarEspecificacoes,
     DownloadEspecificacao, DownloadUltimaEspecificacao,
+    listarQuantidadeProjeto,
 )
 
 app_name = 'projetos'
 
 urlpatterns = [
+    path('quantidadeProjeto', listarQuantidadeProjeto.as_view(), name='quantidadeProjeto'),
     path('cadastrarProjeto', cadastrarProjeto.as_view(), name='cadastrarProjeto'),
     path('upload-arquivo', uploadArquivo.as_view(), name='upload-arquivo'),
     path('listarProjetos', listarProjetos.as_view(), name='ListarProjetos'),

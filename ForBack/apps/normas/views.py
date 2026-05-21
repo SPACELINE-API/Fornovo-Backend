@@ -139,6 +139,11 @@ class ListarNormas(APIView):
         ]
         return Response(lista_normas, status=200)
     
+class listarQuantidadeNorma(APIView):
+    def get(self, request):
+        normas = Norma.objects.all()
+        return Response({"total": normas.count()}, status=200)
+    
 class EditarDetsNorma(APIView):
     def patch(self, request, id_norma):
         try:

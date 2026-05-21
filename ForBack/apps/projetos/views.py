@@ -45,6 +45,14 @@ class listarProjetos(APIView):
 
         return Response(serializer.data)   
 
+class listarQuantidadeProjeto(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        projetos = Projeto.objects.all()
+        return Response({"total": projetos.count()})
+
+
 class buscarProjeto(APIView):
     permission_classes = [IsAuthenticated]
 

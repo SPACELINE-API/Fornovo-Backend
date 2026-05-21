@@ -9,7 +9,8 @@ from .views import (
     ativarNorma,
     DownloadRelatorio,
     StatusRelatorio,
-    historicoRelatorio
+    historicoRelatorio,
+    ConformidadeIAView,
 )
 
 app_name = 'dados_ia'
@@ -25,5 +26,6 @@ urlpatterns = [
     path('dados-processados/<uuid:projeto_id>', ConsultarDadosProcessadosIA.as_view(), name='consultar_dados_ia'),
     path('download-relatorio', DownloadRelatorio.as_view(), name='download-relatorio'),
     path('status-relatorio', StatusRelatorio.as_view(), name='status-relatorio'),
-    path('historico-relatorio', historicoRelatorio.as_view(), name = 'historico-relatorio')
+    path('historico-relatorio', historicoRelatorio.as_view(), name = 'historico-relatorio'),
+    path('conformidade/', ConformidadeIAView.as_view(), name='conformidade-ia'),
 ]
