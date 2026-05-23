@@ -76,7 +76,7 @@ class Projeto(models.Model):
         super().save(*args, **kwargs)
 
 def UploadDeArquivo(instance, filename):
-    if instance.tipo_arquivo in ['xlsx', 'docx']:
+    if instance.tipo_arquivo in ['xlsx', 'docx', 'docx_espec']:
         return f'memorial/{filename}'
     return f'cad_arquivos/{filename}'
 

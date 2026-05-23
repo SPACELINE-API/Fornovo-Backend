@@ -35,6 +35,7 @@ from .utils.conformidade import (
 )
 
 from apps.dados_ia.services.memorial.pandas.builder import gerar_memorial
+from apps.dados_ia.services.especificacao.gerar_especificacao import gerar_especificacao
 
 _lock = threading.Lock()
 
@@ -288,6 +289,7 @@ class ProcessarProjetoIA(APIView):
 class DownloadRelatorio(APIView):
     def get(self, request):
         projeto_id = request.query_params.get("projeto_id")
+        relatorio_id = request.query_params.get('relatorio_id')
 
         if not projeto_id:
             return Response({"erro": "O parâmetro 'projeto_id' é obrigatório"}, status=400)
@@ -297,7 +299,7 @@ class DownloadRelatorio(APIView):
         except Projeto.DoesNotExist:
             return Response({"erro": "Projeto não encontrado."}, status=404)
 
-        relatorio = RelatorioConformidade.objects.filter(projeto=projeto).order_by('criado_em').last()
+        relatorio = RelatorioConformidade.objects.filter(projeto=projeto, id=relatorio_id).order_by('criado_em').last()
 
         if not relatorio:
             return Response({"erro": "Nenhum relatório encontrado."}, status=404)
@@ -365,6 +367,8 @@ class historicoRelatorio(APIView):
                 "id": relatorio.id,
                 "nome_arquivo": relatorio.nome_arquivo,
                 "criado_em": relatorio.criado_em,
+                "responsavel": relatorio.responsavel,
+                "geracao_manual": relatorio.geracao_manual
             })
 
         return Response(data)
@@ -372,6 +376,10 @@ class historicoRelatorio(APIView):
     def post(self, request):
         projeto_id = request.data.get("projeto_id")
         arquivo = request.FILES.get("arquivo")
+        usuario = request.user
+        nome_usuario = usuario.nome_usuario
+
+        print(nome_usuario)
 
         if not projeto_id:
             return Response(
@@ -397,7 +405,9 @@ class historicoRelatorio(APIView):
             projeto=projeto,
             nome_arquivo=arquivo.name,
             caminho_arquivo=f"relatorios/{arquivo.name}",
-            arquivo=arquivo
+            arquivo=arquivo,
+            responsavel=nome_usuario,
+            geracao_manual=True
         )
 
         return Response(
@@ -786,6 +796,159 @@ class StatusMemCal(APIView):
                 })
         except Exception as e:
             return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class SalvarEspecificacao(APIView):
+    parser_classes = [MultiPartParser, JSONParser]
+
+    def _parse_json_field(self, request, key):
+        arquivo = request.FILES.get(key)
+        if arquivo:
+            return json.loads(arquivo.read().decode("utf-8"))
+        valor = request.data.get(key)
+        if valor:
+            if isinstance(valor, str):
+                return json.loads(valor)
+            return valor
+        return None
+
+    def post(self, request, *args, **kwargs):
+        try:
+            projeto_id = request.data.get("projeto_id")
+            if not projeto_id:
+                return Response(
+                    {"erro": "O campo 'projeto_id' é obrigatório."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                projeto = Projeto.objects.get(id_projeto=projeto_id)
+            except Projeto.DoesNotExist:
+                return Response({"erro": "Projeto não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+            dados_arquivo = self._parse_json_field(request, "arquivo")
+            dados_dxf    = self._parse_json_field(request, "dxf")
+
+            if not dados_arquivo:
+                return Response(
+                    {"erro": "Envie o JSON manual no campo 'arquivo'."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if isinstance(dados_arquivo, list):
+                dados_arquivo = {"ambientes": dados_arquivo}
+            elif isinstance(dados_arquivo, dict) and "ambientes" not in dados_arquivo:
+                dados_arquivo = {"ambientes": [dados_arquivo]}
+
+            if not dados_dxf:
+                dados_dxf = {}
+
+            dados_arquivo["nome"]       = getattr(projeto, "nome_projeto", "") or "Não informado"
+            dados_arquivo["cliente"]    = getattr(projeto, "cliente",      "") or "Não informado"
+            dados_arquivo["localizacao"] = getattr(projeto, "localizacao", "") or "Não informado"
+            dados_arquivo["cep"]        = getattr(projeto, "cep", "") or "Não informado"
+            dados_arquivo["descricao"]  = getattr(projeto, "descricao", "") or "Não informada"
+            
+            dt_inicio = getattr(projeto, "data_inicio", None)
+            dados_arquivo["data_inicio"] = dt_inicio.strftime("%d/%m/%Y") if dt_inicio else "Não informada"
+            
+            dt_fim = getattr(projeto, "data_fim", None)
+            dados_arquivo["data_fim"] = dt_fim.strftime("%d/%m/%Y") if dt_fim else "Não informada"
+
+            output = gerar_especificacao(dados_arquivo, dados_dxf)
+
+            if not output:
+                return Response(
+                    {"erro": "Falha na geração do documento."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            output.seek(0)
+            arquivo_bytes = output.getvalue()
+
+            nome_limpo  = re.sub(r'[^\w\s-]', '', getattr(projeto, 'nome_projeto', str(projeto_id))).strip().replace(' ', '_')
+            nome_arquivo = f"Especificacao_{nome_limpo}.docx"
+            hash_arquivo = hashlib.sha256(arquivo_bytes).hexdigest()
+
+            Arquivo.objects.create(
+                projeto=projeto,
+                nome_arquivo=nome_arquivo,
+                hash_arquivo=hash_arquivo,
+                tipo_arquivo='docx_espec',
+                caminho_arquivo=ContentFile(arquivo_bytes, name=nome_arquivo)
+            )
+
+            return Response(
+                {
+                    "mensagem": "Especificação técnica gerada com sucesso!",
+                    "nome_arquivo": nome_arquivo,
+                },
+                status=status.HTTP_201_CREATED
+            )
+
+        except ValueError as ve:
+            return Response({"erro": str(ve)}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+        except json.JSONDecodeError as e:
+            return Response({"erro": "JSON inválido.", "detalhe": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())
+            return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def get(self, request, *args, **kwargs):
+        try:
+            projeto_id = request.query_params.get("projeto_id")
+            if not projeto_id:
+                return Response(
+                    {"erro": "O parâmetro 'projeto_id' é obrigatório na URL."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            arquivo = Arquivo.objects.filter(
+                projeto_id=projeto_id, tipo_arquivo='docx_espec'
+            ).last()
+
+            if not arquivo:
+                return Response(
+                    {"erro": "Nenhuma especificação técnica salva para este projeto."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            if not arquivo.caminho_arquivo:
+                return Response({"erro": "Arquivo físico não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+            return FileResponse(
+                arquivo.caminho_arquivo.open("rb"),
+                as_attachment=True,
+                filename=arquivo.nome_arquivo,
+                content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())
+            return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class StatusEspecificacao(APIView):
+    def get(self, request):
+        projeto_id = request.query_params.get("projeto_id")
+        if not projeto_id:
+            return Response(
+                {"erro": "O parâmetro 'projeto_id' é obrigatório."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            existe = Arquivo.objects.filter(
+                projeto_id=projeto_id, tipo_arquivo='docx_espec'
+            ).exists()
+            return Response(
+                {"status": "concluido" if existe else "pendente"}
+            )
+        except Exception as e:
+            return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 class ConsultarDadosProcessadosIA(APIView):
     permission_classes = [AllowAny]
@@ -826,9 +989,38 @@ class ConsultarDadosProcessadosIA(APIView):
 
     def get(self, request, projeto_id):
         try:
-            dados_obj = DadosExtraidos.objects.get(
+            dados_obj = DadosExtraidos.objects.filter(
                 arquivo__projeto_id=projeto_id
-            )
+            ).last()
+
+            if not dados_obj:
+                # Fallback: Se não tem extração salva, tenta extrair agora do arquivo CAD (DXF) associado
+                arquivo_cad = Arquivo.objects.filter(projeto_id=projeto_id, tipo_arquivo='dxf').last()
+                if arquivo_cad and arquivo_cad.caminho_arquivo:
+                    try:
+                        from .services import extractorDXF as extractor
+                        caminho = str(arquivo_cad.caminho_arquivo.path)
+                        if caminho.lower().endswith('.dxf'):
+                            dados_dxf = extractor.processar_dxf_para_json(caminho, gerar_chunks=False)
+                            # Salva para as próximas requisições
+                            DadosExtraidos.objects.create(arquivo=arquivo_cad, dados=dados_dxf)
+                            return Response(
+                                {
+                                    "status": "concluido",
+                                    "dados_dxf": dados_dxf,
+                                },
+                                status=status.HTTP_200_OK,
+                            )
+                    except Exception as e:
+                        print("Fallback DXF extraction failed:", e)
+
+                return Response(
+                    {
+                        "status": "pendente",
+                        "mensagem": "Nenhum dado CAD processado e nenhum arquivo DXF viável encontrado.",
+                    },
+                    status=status.HTTP_404_NOT_FOUND,
+                )
 
             raw_data = dados_obj.dados_binarios
             dados_final = self.carregar_dados(raw_data)
@@ -842,15 +1034,6 @@ class ConsultarDadosProcessadosIA(APIView):
                     "dados_dxf": dados_final,
                 },
                 status=status.HTTP_200_OK,
-            )
-
-        except DadosExtraidos.DoesNotExist:
-            return Response(
-                {
-                    "status": "pendente",
-                    "mensagem": "A IA ainda não processou este projeto.",
-                },
-                status=status.HTTP_404_NOT_FOUND,
             )
 
         except Exception as e:
