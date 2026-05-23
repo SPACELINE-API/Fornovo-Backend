@@ -3,7 +3,16 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from apps.usuarios.auth.permissions import IsAdm
 from rest_framework.response import Response
-from .models import Projeto, Arquivo, padraoStatus, EspecificacaoIA
+from .models import Projeto, Arquivo, padraoStatus, EspecificacaoIA, ProjetoNorma, Notificacao
+from .services.notificacoes import (
+    usuario_da_requisicao,
+    registrar_novo_projeto,
+    registrar_mudanca_status_projeto,
+    registrar_arquivo_projeto,
+    registrar_projetos_atrasados,
+    popular_historico_inicial,
+)
+from .services.atividade import atividade_ultimos_meses
 from django.core.exceptions import ValidationError
 from apps.usuarios.models import Usuario
 from .serializers import ProjetoSerializer, EspecificacaoIASerializer
@@ -23,7 +32,8 @@ class cadastrarProjeto(APIView):
 
                 usuario_selecionado = Usuario.objects.get(id_usuario=engenheiro_id)
 
-                serializer.save(engenheiro=usuario_selecionado)
+                projeto = serializer.save(engenheiro=usuario_selecionado)
+                registrar_novo_projeto(projeto, usuario_da_requisicao(request))
 
                 return Response({
                         "mensagem": "Projeto criado com sucesso",
@@ -52,6 +62,81 @@ class listarQuantidadeProjeto(APIView):
         projetos = Projeto.objects.all()
         return Response({"total": projetos.count()})
 
+class listarQuantidadeProjetoPorStatus(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        projetos = Projeto.objects.all()
+        return Response({
+            "Concluído": projetos.filter(status="Concluído").count(),
+            "Em andamento": projetos.filter(status="Em andamento").count(),
+            "Em revisão": projetos.filter(status="Em revisão").count(),
+            "Pendente": projetos.filter(status="Pendente").count(),
+        })
+
+class listarQuantidadeProjetoPorPrazo(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        contagem = Projeto.contagem_por_prazo()
+        total = contagem['total']
+
+        if total == 0:
+            return Response({
+                **contagem,
+                'percentual_no_prazo': 0,
+                'percentual_atrasados': 0,
+            })
+
+        return Response({
+            **contagem,
+            'percentual_no_prazo': round((contagem['no_prazo'] / total) * 100),
+            'percentual_atrasados': round((contagem['atrasados'] / total) * 100),
+        })
+
+class listarTopNormasUtilizadas(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(ProjetoNorma.top_normas_utilizadas(limite=5))
+
+class contagemNotificacoesNaoLidas(APIView):
+    """Contagem para o badge do sino. Não marca como lida (task do dropdown)."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({
+            'nao_lidas': Notificacao.contar_nao_lidas(request.user),
+        })
+
+class listarNotificacoes(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        popular_historico_inicial()
+        registrar_projetos_atrasados()
+
+        limite = min(int(request.query_params.get('limite', 20)), 50)
+        notificacoes = Notificacao.listar_recentes(limite=limite)
+
+        return Response([
+            {
+                'id': n.id,
+                'mensagem': n.mensagem,
+                'tipo': n.tipo,
+                'data': n.data_formatada(),
+                'usuario': n.usuario,
+                'lida': n.lida,
+            }
+            for n in notificacoes
+        ])
+
+class listarAtividadeUltimosMeses(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        meses = min(int(request.query_params.get('meses', 6)), 12)
+        return Response(atividade_ultimos_meses(meses=meses))
 
 class buscarProjeto(APIView):
     permission_classes = [IsAuthenticated]
@@ -92,8 +177,14 @@ class AtualizarStatusProjeto(APIView):
                     status=400
                 )
 
+            status_anterior = projeto.status
             projeto.status = novo_status
             projeto.save()
+
+            if novo_status != status_anterior:
+                registrar_mudanca_status_projeto(
+                    projeto, novo_status, usuario_da_requisicao(request)
+                )
 
             return Response({
                 "mensagem": "Status atualizado com sucesso",
@@ -118,6 +209,7 @@ class ProjetoUpdate(APIView):
     def patch(self, request, id_projeto):
         try:
             projeto = Projeto.objects.get(id_projeto=id_projeto)
+            status_anterior = projeto.status
 
             serializer = ProjetoSerializer(
                 projeto,
@@ -126,7 +218,13 @@ class ProjetoUpdate(APIView):
             )
 
             if serializer.is_valid():
-                serializer.save()
+                projeto = serializer.save()
+                novo_status = projeto.status
+
+                if novo_status != status_anterior:
+                    registrar_mudanca_status_projeto(
+                        projeto, novo_status, usuario_da_requisicao(request)
+                    )
 
                 return Response({
                     "mensagem": "Projeto atualizado com sucesso",
@@ -172,6 +270,9 @@ class uploadArquivo(APIView):
                 caminho_arquivo=arquivo,
                 tipo_arquivo=ext,
                 hash_arquivo=hash_arquivo
+            )
+            registrar_arquivo_projeto(
+                projeto, arquivo.name, ext, usuario_da_requisicao(request)
             )
             return Response({
                 "mensagem": "Arquivo enviado com sucesso",

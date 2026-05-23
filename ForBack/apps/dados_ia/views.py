@@ -19,6 +19,10 @@ from django.core.files.base import ContentFile
 
 from .models import DadosExtraidos, LogValidacao, DadosInseridosManualmente, RelatorioConformidade
 from apps.projetos.models import Projeto, Norma, Arquivo, ProjetoNorma
+from apps.projetos.services.notificacoes import (
+    usuario_da_requisicao,
+    registrar_arquivo_projeto,
+)
 from .services import (chroma_normas as agente, oda_installer as oda, extractorDXF as extractor, 
                        ollama_installer)
 from .services.chroma_normas import inserir_norma, apagar_norma
@@ -237,7 +241,7 @@ class ProcessarProjetoIA(APIView):
                     output_dir.rmdir()
             
             try:
-                ollama_installer.ensure_ollama_ready(['llama3.1:8b'])
+                ollama_installer.ensure_ollama_ready(['minimax-m2.5:cloud'])
                 retorno_ia = executar_agente(dados_json)
             except Exception as e:
                 return Response({"erro": "Falha na execução do agente da IA", "detalhe": str(e)}, status=500)
@@ -732,6 +736,9 @@ class SalvarMemorialCalculo(APIView):
                 hash_arquivo=hash_arquivo,
                 tipo_arquivo='xlsx',
                 caminho_arquivo=ContentFile(arquivo_bytes, name=nome_arquivo)
+            )
+            registrar_arquivo_projeto(
+                projeto, nome_arquivo, 'xlsx', usuario_da_requisicao(request)
             )
 
             return Response({
