@@ -141,7 +141,7 @@ def registrar_novo_funcionario(usuario_criado, admin_nome):
 def registrar_levantamento_campo(projeto, usuario='Sistema'):
     registrar(
         tipo='alerta',
-        mensagem=f'Levantamento de campo registrado em "{projeto.nome_projeto}" — pendente de revisão',
+        mensagem=f'Levantamento de campo registrado em "{projeto.nome_projeto}" — esperando por revisão.',
         usuario=usuario,
         referencia_tipo='levantamento',
         referencia_id=projeto.id_projeto,

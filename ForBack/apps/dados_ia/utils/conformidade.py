@@ -27,10 +27,7 @@ def _eh_tabela_sumario(table) -> bool:
 
 
 def extrair_sumario_docx(arquivo) -> dict | None:
-    """
-    Lê o Sumário Executivo de um relatório .docx gerado por gerar_docx_bytes.
-    Retorna contagens ou None se a tabela não for encontrada.
-    """
+    print("Extraindo sumário do arquivo...")
     doc = Document(arquivo)
     conforme = nao_conforme = inconclusivo = total = 0
     encontrou = False
