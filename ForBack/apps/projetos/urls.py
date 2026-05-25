@@ -6,11 +6,25 @@ from .views import (
     verificarArquivo, AtualizarStatusProjeto,
     UploadEspecificacao, BaixarEspecificacao, ListarEspecificacoes,
     DownloadEspecificacao, DownloadUltimaEspecificacao,
+    listarQuantidadeProjeto,
+    listarQuantidadeProjetoPorStatus,
+    listarQuantidadeProjetoPorPrazo,
+    listarTopNormasUtilizadas,
+    contagemNotificacoesNaoLidas,
+    listarNotificacoes,
+    listarAtividadeUltimosMeses,
 )
 
 app_name = 'projetos'
 
 urlpatterns = [
+    path('quantidadeProjeto', listarQuantidadeProjeto.as_view(), name='quantidadeProjeto'),
+    path('quantidadeProjetoPorStatus', listarQuantidadeProjetoPorStatus.as_view(), name='quantidadeProjetoPorStatus'),
+    path('quantidadeProjetoPorPrazo', listarQuantidadeProjetoPorPrazo.as_view(), name='quantidadeProjetoPorPrazo'),
+    path('topNormasUtilizadas', listarTopNormasUtilizadas.as_view(), name='topNormasUtilizadas'),
+    path('notificacoes/contagem', contagemNotificacoesNaoLidas.as_view(), name='notificacoes-contagem'),
+    path('notificacoes', listarNotificacoes.as_view(), name='notificacoes'),
+    path('atividadeUltimosMeses', listarAtividadeUltimosMeses.as_view(), name='atividadeUltimosMeses'),
     path('cadastrarProjeto', cadastrarProjeto.as_view(), name='cadastrarProjeto'),
     path('upload-arquivo', uploadArquivo.as_view(), name='upload-arquivo'),
     path('listarProjetos', listarProjetos.as_view(), name='ListarProjetos'),

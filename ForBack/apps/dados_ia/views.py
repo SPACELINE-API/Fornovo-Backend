@@ -10,7 +10,7 @@ from pathlib import Path
 from aiohttp import request
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import MultiPartParser, JSONParser, FormParser
 from django.http import FileResponse, HttpResponse, JsonResponse
 import time
@@ -19,6 +19,10 @@ from django.core.files.base import ContentFile
 
 from .models import DadosExtraidos, LogValidacao, DadosInseridosManualmente, RelatorioConformidade
 from apps.projetos.models import Projeto, Norma, Arquivo, ProjetoNorma
+from apps.projetos.services.notificacoes import (
+    usuario_da_requisicao,
+    registrar_arquivo_projeto,
+)
 from .services import (chroma_normas as agente, oda_installer as oda, extractorDXF as extractor, 
                        ollama_installer)
 from .services.chroma_normas import inserir_norma, apagar_norma
@@ -28,6 +32,11 @@ import threading
 from rest_framework import status
 
 from .utils.relatorio import gerar_docx_bytes
+from .utils.conformidade import (
+    extrair_sumario_arquivo,
+    agregar_sumarios,
+    calcular_percentual,
+)
 
 from apps.dados_ia.services.memorial.pandas.builder import gerar_memorial
 from apps.dados_ia.services.especificacao.gerar_especificacao import gerar_especificacao
@@ -232,7 +241,7 @@ class ProcessarProjetoIA(APIView):
                     output_dir.rmdir()
             
             try:
-                ollama_installer.ensure_ollama_ready(['llama3.1:8b'])
+                ollama_installer.ensure_ollama_ready(['minimax-m2.5:cloud'])
                 retorno_ia = executar_agente(dados_json)
             except Exception as e:
                 return Response({"erro": "Falha na execução do agente da IA", "detalhe": str(e)}, status=500)
@@ -367,7 +376,6 @@ class historicoRelatorio(APIView):
             })
 
         return Response(data)
-    
 
     def post(self, request):
         projeto_id = request.data.get("projeto_id")
@@ -414,7 +422,112 @@ class historicoRelatorio(APIView):
             status=status.HTTP_201_CREATED
         )
 
-        
+
+class ConformidadeIAView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        projeto_id = request.query_params.get("projeto_id")
+        incluir_projetos = request.query_params.get("por_projeto", "").lower() in (
+            "1",
+            "true",
+            "sim",
+        )
+
+        relatorios = (
+            RelatorioConformidade.objects.select_related("projeto")
+            .exclude(arquivo="")
+            .order_by("projeto_id", "-criado_em")
+        )
+
+        if projeto_id:
+            try:
+                projeto = Projeto.objects.get(id_projeto=projeto_id)
+            except Projeto.DoesNotExist:
+                return Response({"erro": "Projeto não encontrado."}, status=404)
+            relatorios = relatorios.filter(projeto=projeto)
+
+        sumarios_globais = []
+        por_projeto_map: dict = {}
+
+        for relatorio in relatorios:
+            if not relatorio.arquivo:
+                continue
+            try:
+                sumario = extrair_sumario_arquivo(relatorio.arquivo)
+            except Exception:
+                continue
+            if not sumario:
+                continue
+
+            sumarios_globais.append(sumario)
+
+            if incluir_projetos:
+                pid = str(relatorio.projeto_id)
+                if pid not in por_projeto_map:
+                    por_projeto_map[pid] = {
+                        "projeto_id": pid,
+                        "nome_projeto": relatorio.projeto.nome_projeto,
+                        "sumarios": [],
+                        "relatorios": [],
+                    }
+                por_projeto_map[pid]["sumarios"].append(sumario)
+                por_projeto_map[pid]["relatorios"].append(
+                    {
+                        "id": relatorio.id,
+                        "nome_arquivo": relatorio.nome_arquivo,
+                        "criado_em": relatorio.criado_em,
+                        "valor": calcular_percentual(
+                            sumario["conforme"], sumario["total"]
+                        ),
+                        "conforme": sumario["conforme"],
+                        "total_verificacoes": sumario["total"],
+                    }
+                )
+
+        if not sumarios_globais:
+            valor, status_label, cor = 0, "Risco", "#dc2626"
+            payload = {
+                "valor": valor,
+                "status": status_label,
+                "cor": cor,
+                "metricas": [
+                    {"label": "Verificações conformes", "valor": 0},
+                    {"label": "Total de verificações", "valor": 0},
+                ],
+                "detalhe": {
+                    "conforme": 0,
+                    "nao_conforme": 0,
+                    "inconclusivo": 0,
+                    "total_verificacoes": 0,
+                    "relatorios_analisados": 0,
+                },
+            }
+        else:
+            payload = agregar_sumarios(sumarios_globais)
+
+        if incluir_projetos:
+            por_projeto = []
+            for item in por_projeto_map.values():
+                agg = agregar_sumarios(item["sumarios"])
+                por_projeto.append(
+                    {
+                        "projeto_id": item["projeto_id"],
+                        "nome_projeto": item["nome_projeto"],
+                        "valor": agg["valor"],
+                        "status": agg["status"],
+                        "cor": agg["cor"],
+                        "conforme": agg["detalhe"]["conforme"],
+                        "total_verificacoes": agg["detalhe"]["total_verificacoes"],
+                        "relatorios_count": len(item["relatorios"]),
+                        "relatorios": item["relatorios"],
+                    }
+                )
+            payload["por_projeto"] = por_projeto
+
+        return Response(payload)
+
+
 class inserirNorma(APIView):
     permission_classes = [AllowAny]
     parser_classes = [MultiPartParser]
@@ -623,6 +736,9 @@ class SalvarMemorialCalculo(APIView):
                 hash_arquivo=hash_arquivo,
                 tipo_arquivo='xlsx',
                 caminho_arquivo=ContentFile(arquivo_bytes, name=nome_arquivo)
+            )
+            registrar_arquivo_projeto(
+                projeto, nome_arquivo, 'xlsx', usuario_da_requisicao(request)
             )
 
             return Response({

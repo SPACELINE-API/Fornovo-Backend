@@ -5,6 +5,12 @@ from rest_framework.response import Response
 from django.http import FileResponse
 from rest_framework import status
 from .models import Norma
+from apps.projetos.services.notificacoes import (
+    usuario_da_requisicao,
+    registrar_norma_criada,
+    registrar_norma_atualizada,
+    registrar_norma_status,
+)
 
 class CriarNormaCompleta(APIView):
     def post(self, request):
@@ -47,6 +53,7 @@ class CriarNormaCompleta(APIView):
                 arquivo_pdf=arquivo,
                 hash_arquivo=hash_arquivo
             )
+            registrar_norma_criada(nova_norma, usuario_da_requisicao(request))
 
             return Response({
                 "mensagem": "Norma e arquivo cadastrados com sucesso!",
@@ -79,6 +86,7 @@ class AlterarStatusNorma(APIView):
                 
             norma.status = novo_status 
             norma.save()
+            registrar_norma_status(norma, usuario_da_requisicao(request))
 
             return Response({
                 "mensagem": "Status atualizado com sucesso!",
@@ -138,6 +146,11 @@ class ListarNormas(APIView):
             for norma in normas
         ]
         return Response(lista_normas, status=200)
+    
+class listarQuantidadeNorma(APIView):
+    def get(self, request):
+        normas = Norma.objects.all()
+        return Response({"total": normas.count()}, status=200)
     
 class EditarDetsNorma(APIView):
     def patch(self, request, id_norma):
@@ -208,6 +221,7 @@ class EditarDetsNorma(APIView):
                 norma.hash_arquivo = hash_arquivo
 
             norma.save()
+            registrar_norma_atualizada(norma, usuario_da_requisicao(request))
 
             return Response({
                 "mensagem": "Detalhes da norma atualizados com sucesso!",
