@@ -1,9 +1,10 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
+from django.db.models import Prefetch
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from apps.usuarios.auth.permissions import IsAdm
 from rest_framework.response import Response
-from .models import Projeto, Arquivo, padraoStatus, EspecificacaoIA, ProjetoNorma, Notificacao
+from .models import Projeto, Arquivo, padraoStatus, EspecificacaoIA, ProjetoNorma, Notificacao, NotificacaoLeitura
 from .services.notificacoes import (
     usuario_da_requisicao,
     registrar_novo_projeto,
@@ -105,9 +106,10 @@ class contagemNotificacoesNaoLidas(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response({
-            'nao_lidas': Notificacao.contar_nao_lidas(request.user),
-        })
+        nao_lidas = Notificacao.objects.exclude(
+            notificacaoleitura__usuario=request.user
+        ).count()
+        return Response({'nao_lidas': nao_lidas})
 
 class listarNotificacoes(APIView):
     permission_classes = [IsAuthenticated]
@@ -117,7 +119,13 @@ class listarNotificacoes(APIView):
         registrar_projetos_atrasados()
 
         limite = min(int(request.query_params.get('limite', 20)), 50)
-        notificacoes = Notificacao.listar_recentes(limite=limite)
+        notificacoes = Notificacao.listar_recentes(limite=limite).prefetch_related(
+            Prefetch(
+                'notificacaoleitura_set',
+                queryset=NotificacaoLeitura.objects.filter(usuario=request.user),
+                to_attr='leituras_do_usuario'
+            )
+        )
 
         return Response([
             {
@@ -126,10 +134,22 @@ class listarNotificacoes(APIView):
                 'tipo': n.tipo,
                 'data': n.data_formatada(),
                 'usuario': n.usuario,
-                'lida': n.lida,
+                'lida': n.notificacaoleitura_set.filter(usuario=request.user).exists(),
             }
             for n in notificacoes
         ])
+
+class alterarStatusNotificacao(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        notificacoes = Notificacao.objects.all()
+        for notificacao in notificacoes:
+            NotificacaoLeitura.objects.get_or_create(
+            notificacao=notificacao,
+            usuario=request.user
+        )
+        return Response({"mensagem": "Notificações marcadas como lidas."})
 
 class listarAtividadeUltimosMeses(APIView):
     permission_classes = [IsAuthenticated]

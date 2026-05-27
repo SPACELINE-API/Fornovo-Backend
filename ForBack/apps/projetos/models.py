@@ -184,6 +184,14 @@ class Notificacao(models.Model):
     @classmethod
     def listar_recentes(cls, limite=20):
         return cls.objects.all()[:limite]
+    
+class NotificacaoLeitura(models.Model):
+    notificacao = models.ForeignKey(Notificacao, on_delete=models.CASCADE)
+    usuario = models.ForeignKey('usuarios.Usuario', on_delete=models.CASCADE)
+    lida_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['notificacao', 'usuario']
 
 class ProjetoNorma(models.Model):
     id = models.AutoField(primary_key=True)
