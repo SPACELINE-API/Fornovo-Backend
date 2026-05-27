@@ -13,6 +13,7 @@ from .views import (
     contagemNotificacoesNaoLidas,
     listarNotificacoes,
     listarAtividadeUltimosMeses,
+    alterarStatusNotificacao
 )
 
 app_name = 'projetos'
@@ -41,4 +42,5 @@ urlpatterns = [
     path('especificacoes/<int:id_especificacao>/download/', DownloadEspecificacao.as_view(), name='download-especificacao'),
     path('<uuid:id_projeto>/especificacoes/latest/', DownloadUltimaEspecificacao.as_view(), name='download-ultima-especificacao'),
     path('<uuid:id_projeto>/especificacoes/', ListarEspecificacoes.as_view(), name='listar-especificacoes'),
+    path('notificacoes/alterarStatus', alterarStatusNotificacao.as_view(), name='notificacoes-status')
 ]
