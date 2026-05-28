@@ -296,8 +296,13 @@ class uploadArquivo(APIView):
             )
             return Response({
                 "mensagem": "Arquivo enviado com sucesso",
-                "id_arquivo": novo_arquivo.id_arquivo
-            })
+                "id_arquivo": novo_arquivo.id_arquivo,
+                "nome": novo_arquivo.nome_arquivo,
+                "caminho": novo_arquivo.caminho_arquivo.url,
+                "tipo": novo_arquivo.tipo_arquivo,
+                "hash": novo_arquivo.hash_arquivo,
+                "projeto_id": str(novo_arquivo.projeto.id_projeto)
+            }, status=201)
 
         except Projeto.DoesNotExist:
             return Response({"erro": "Projeto não encontrado"}, status=404)
@@ -372,20 +377,15 @@ class buscarArquivo(APIView):
         
 class deletarArquivo(APIView):
     permission_classes = [IsAuthenticated]
-
     def delete(self, request, id):
         try:
             arquivo = Arquivo.objects.get(id_arquivo=id)
             arquivo.caminho_arquivo.delete(save=False)
             arquivo.delete()
-
-            return Response({
-                "mensagem": "Arquivo deletado com sucesso"
-            })
-
+            return Response({"mensagem": "Arquivo deletado com sucesso"}, status=200)
         except Arquivo.DoesNotExist:
             return Response({"erro": "Arquivo não encontrado"}, status=404)
-        
+
 class VerificarStatusIA(APIView):
     permission_classes = [IsAuthenticated]
 
