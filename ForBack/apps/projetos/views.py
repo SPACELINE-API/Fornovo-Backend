@@ -1,9 +1,19 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
+from django.db.models import Prefetch
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from apps.usuarios.auth.permissions import IsAdm
 from rest_framework.response import Response
-from .models import Projeto, Arquivo, padraoStatus, EspecificacaoIA
+from .models import Projeto, Arquivo, padraoStatus, EspecificacaoIA, ProjetoNorma, Notificacao, NotificacaoLeitura
+from .services.notificacoes import (
+    usuario_da_requisicao,
+    registrar_novo_projeto,
+    registrar_mudanca_status_projeto,
+    registrar_arquivo_projeto,
+    registrar_projetos_atrasados,
+    popular_historico_inicial,
+)
+from .services.atividade import atividade_ultimos_meses
 from django.core.exceptions import ValidationError
 from apps.usuarios.models import Usuario
 from .serializers import ProjetoSerializer, EspecificacaoIASerializer
@@ -23,7 +33,8 @@ class cadastrarProjeto(APIView):
 
                 usuario_selecionado = Usuario.objects.get(id_usuario=engenheiro_id)
 
-                serializer.save(engenheiro=usuario_selecionado)
+                projeto = serializer.save(engenheiro=usuario_selecionado)
+                registrar_novo_projeto(projeto, usuario_da_requisicao(request))
 
                 return Response({
                         "mensagem": "Projeto criado com sucesso",
@@ -44,6 +55,108 @@ class listarProjetos(APIView):
         serializer = ProjetoSerializer(projetos, many=True)
 
         return Response(serializer.data)   
+
+class listarQuantidadeProjeto(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        projetos = Projeto.objects.all()
+        return Response({"total": projetos.count()})
+
+class listarQuantidadeProjetoPorStatus(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        projetos = Projeto.objects.all()
+        return Response({
+            "Concluído": projetos.filter(status="Concluído").count(),
+            "Em andamento": projetos.filter(status="Em andamento").count(),
+            "Em revisão": projetos.filter(status="Em revisão").count(),
+            "Pendente": projetos.filter(status="Pendente").count(),
+        })
+
+class listarQuantidadeProjetoPorPrazo(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        contagem = Projeto.contagem_por_prazo()
+        total = contagem['total']
+
+        if total == 0:
+            return Response({
+                **contagem,
+                'percentual_no_prazo': 0,
+                'percentual_atrasados': 0,
+            })
+
+        return Response({
+            **contagem,
+            'percentual_no_prazo': round((contagem['no_prazo'] / total) * 100),
+            'percentual_atrasados': round((contagem['atrasados'] / total) * 100),
+        })
+
+class listarTopNormasUtilizadas(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(ProjetoNorma.top_normas_utilizadas(limite=5))
+
+class contagemNotificacoesNaoLidas(APIView):
+    """Contagem para o badge do sino. Não marca como lida (task do dropdown)."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        nao_lidas = Notificacao.objects.exclude(
+            notificacaoleitura__usuario=request.user
+        ).count()
+        return Response({'nao_lidas': nao_lidas})
+
+class listarNotificacoes(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        popular_historico_inicial()
+        registrar_projetos_atrasados()
+
+        limite = min(int(request.query_params.get('limite', 20)), 50)
+        notificacoes = Notificacao.listar_recentes(limite=limite).prefetch_related(
+            Prefetch(
+                'notificacaoleitura_set',
+                queryset=NotificacaoLeitura.objects.filter(usuario=request.user),
+                to_attr='leituras_do_usuario'
+            )
+        )
+
+        return Response([
+            {
+                'id': n.id,
+                'mensagem': n.mensagem,
+                'tipo': n.tipo,
+                'data': n.data_formatada(),
+                'usuario': n.usuario,
+                'lida': n.notificacaoleitura_set.filter(usuario=request.user).exists(),
+            }
+            for n in notificacoes
+        ])
+
+class alterarStatusNotificacao(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        notificacoes = Notificacao.objects.all()
+        for notificacao in notificacoes:
+            NotificacaoLeitura.objects.get_or_create(
+            notificacao=notificacao,
+            usuario=request.user
+        )
+        return Response({"mensagem": "Notificações marcadas como lidas."})
+
+class listarAtividadeUltimosMeses(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        meses = min(int(request.query_params.get('meses', 6)), 12)
+        return Response(atividade_ultimos_meses(meses=meses))
 
 class buscarProjeto(APIView):
     permission_classes = [IsAuthenticated]
@@ -84,8 +197,14 @@ class AtualizarStatusProjeto(APIView):
                     status=400
                 )
 
+            status_anterior = projeto.status
             projeto.status = novo_status
             projeto.save()
+
+            if novo_status != status_anterior:
+                registrar_mudanca_status_projeto(
+                    projeto, novo_status, usuario_da_requisicao(request)
+                )
 
             return Response({
                 "mensagem": "Status atualizado com sucesso",
@@ -110,6 +229,7 @@ class ProjetoUpdate(APIView):
     def patch(self, request, id_projeto):
         try:
             projeto = Projeto.objects.get(id_projeto=id_projeto)
+            status_anterior = projeto.status
 
             serializer = ProjetoSerializer(
                 projeto,
@@ -118,7 +238,13 @@ class ProjetoUpdate(APIView):
             )
 
             if serializer.is_valid():
-                serializer.save()
+                projeto = serializer.save()
+                novo_status = projeto.status
+
+                if novo_status != status_anterior:
+                    registrar_mudanca_status_projeto(
+                        projeto, novo_status, usuario_da_requisicao(request)
+                    )
 
                 return Response({
                     "mensagem": "Projeto atualizado com sucesso",
@@ -165,10 +291,18 @@ class uploadArquivo(APIView):
                 tipo_arquivo=ext,
                 hash_arquivo=hash_arquivo
             )
+            registrar_arquivo_projeto(
+                projeto, arquivo.name, ext, usuario_da_requisicao(request)
+            )
             return Response({
                 "mensagem": "Arquivo enviado com sucesso",
-                "id_arquivo": novo_arquivo.id_arquivo
-            })
+                "id_arquivo": novo_arquivo.id_arquivo,
+                "nome": novo_arquivo.nome_arquivo,
+                "caminho": novo_arquivo.caminho_arquivo.url,
+                "tipo": novo_arquivo.tipo_arquivo,
+                "hash": novo_arquivo.hash_arquivo,
+                "projeto_id": str(novo_arquivo.projeto.id_projeto)
+            }, status=201)
 
         except Projeto.DoesNotExist:
             return Response({"erro": "Projeto não encontrado"}, status=404)
@@ -243,20 +377,15 @@ class buscarArquivo(APIView):
         
 class deletarArquivo(APIView):
     permission_classes = [IsAuthenticated]
-
     def delete(self, request, id):
         try:
             arquivo = Arquivo.objects.get(id_arquivo=id)
             arquivo.caminho_arquivo.delete(save=False)
             arquivo.delete()
-
-            return Response({
-                "mensagem": "Arquivo deletado com sucesso"
-            })
-
+            return Response({"mensagem": "Arquivo deletado com sucesso"}, status=200)
         except Arquivo.DoesNotExist:
             return Response({"erro": "Arquivo não encontrado"}, status=404)
-        
+
 class VerificarStatusIA(APIView):
     permission_classes = [IsAuthenticated]
 

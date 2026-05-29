@@ -68,6 +68,8 @@ class RelatorioConformidade(models.Model):
     caminho_arquivo = models.CharField(max_length=500, default='')
     arquivo = models.FileField(upload_to="relatorios/")
     criado_em = models.DateTimeField(auto_now_add=True)
+    responsavel = models.CharField(max_length=255, default='')
+    geracao_manual = models.BooleanField(default=False)
 
     class Meta:
         db_table = "relatorios_conformidade"

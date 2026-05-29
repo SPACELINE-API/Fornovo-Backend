@@ -19,3 +19,4 @@ chromadb==1.5.5
 dotenv==0.9.9
 python-docx==1.2.0
 PyJWT==2.12.1
+xlsxwriter==3.2.9
